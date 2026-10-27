@@ -22,9 +22,14 @@
       },
       "edgeToEdgeEnabled": true
     },
+    "experiments": {
+      "baseUrl": "/sstudyapp"
+    },
     "web": {
+      "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     },
-    "description": "S1-01 Homework app "
+    "description": "S1-01 Homework app"
   }
 }

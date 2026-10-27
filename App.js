@@ -1,4 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,40 +19,63 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+
 /* =========================================================
-   STUDYPLANNER V5
+   STUDYPLANNER V7
    =========================================================
 
-   STUDENTS
-   - Email only
+   STUDENT
+   - School email login
    - No password
-   - @s202x.ssts.edu.sg
+   - Student AI
 
-   TEACHERS
+   TEACHER
    - Username + password
-   - Can add homework
-   - Can add AI knowledge
-   - AI knowledge restricted to their subject
-   - NO AI CHAT
+   - Homework
+   - Teacher knowledge
+   - No AI chat
 
    ADMIN
    - Username + password
-   - All subjects
-   - Can manage knowledge
-   - Can see moderation reports
+   - View accounts
+   - Ban / unban accounts
+   - View AI reports
+   - Manage knowledge
+   - Manage homework
 
    AI
-   - Students only
-   - Inappropriate messages are blocked
-   - Blocked message is deleted
-   - Moderation report is saved for admin
+   - Works immediately in Snack
+   - Built-in subject tutor
+   - Teacher knowledge is optional
+   - Optional Gemini endpoint can be connected later
 
-   IMPORTANT:
-   AsyncStorage is local to the device/browser.
-   A real multi-device deployment requires a backend.
-   ========================================================= */
+   STORAGE
+   - AsyncStorage
+   - Local/browser/device storage
+
+========================================================= */
+
+
+/* =========================================================
+   OPTIONAL REAL AI ENDPOINT
+   =========================================================
+
+   When you have your Netlify Gemini function ready,
+   change this to your Netlify URL.
+
+   Example:
+
+   const AI_ENDPOINT =
+     "https://your-site.netlify.app/.netlify/functions/ask-ai";
+
+   Leave it empty for Snack-only built-in AI.
+
+========================================================= */
+
+const AI_ENDPOINT = "";
 
 
 /* =========================================================
@@ -83,103 +111,111 @@ const STUDENT_EMAIL_REGEX =
    ========================================================= */
 
 const TEACHERS = {
+  /*
+   * App-only teacher accounts. Public staff emails below come from the
+   * SST staff directory. Passwords are generated for THIS prototype only;
+   * they are not SST/MOE account passwords.
+   *
+   * Permissions are based on the staff member's listed department/role.
+   * Where the public directory does not state a specific subject assignment,
+   * check the subjects array with the school before real use.
+   */
   English: {
-    username: "English",
-    password: "English123!",
-    name: "English Teacher",
+    username: "ting_wei_ling_jaslyn@sst.edu.sg",
+    password: "TWLJ123!",
+    name: "Ting Wei Ling Jaslyn",
     role: "teacher",
     subjects: ["English"],
   },
-
   Chinese: {
-    username: "Chinese",
-    password: "Chinese123!",
-    name: "Chinese Teacher",
+    username: "yap_hui_min@sst.edu.sg",
+    password: "YHM123!",
+    name: "Yap Hui Min",
     role: "teacher",
-    subjects: ["Chinese"],
+    subjects: ["Chinese", "HCL"],
   },
-
-  HCL: {
-    username: "HCL",
-    password: "HCL123!",
-    name: "HCL Teacher",
-    role: "teacher",
-    subjects: ["HCL"],
-  },
-
   Math: {
-    username: "Math",
-    password: "Math123!",
-    name: "Math Teacher",
+    username: "wong_yoke_chee_jamie@sst.edu.sg",
+    password: "WYCJ123!",
+    name: "Wong Yoke Chee Jamie",
     role: "teacher",
     subjects: ["Math"],
   },
-
   Science: {
-    username: "Science",
-    password: "Science123!",
-    name: "Science Teacher",
+    username: "leong_woon_foong@sst.edu.sg",
+    password: "LLWF123!",
+    name: "Lim-Leong Woon Foong",
     role: "teacher",
     subjects: ["Science"],
   },
-
   Malay: {
-    username: "Malay",
-    password: "Malay123!",
-    name: "Malay Teacher",
+    username: "wong_lu_ting@sst.edu.sg",
+    password: "WLT123!",
+    name: "Wong Lu Ting",
     role: "teacher",
-    subjects: ["Malay"],
+    subjects: ["Malay", "Chinese", "HCL"],
   },
-
   PE: {
-    username: "PE",
-    password: "PE123!",
-    name: "PE Teacher",
+    username: "ng_jun_wei@sst.edu.sg",
+    password: "NJW123!",
+    name: "Ng Jun Wei",
     role: "teacher",
     subjects: ["Physical Education"],
   },
-
   IE: {
-    username: "IE",
-    password: "IE123!",
-    name: "Innovation & Entrepreneurship Teacher",
+    username: "mohamed_irfan_darian@sst.edu.sg",
+    password: "MID123!",
+    name: "Mohamed Irfan Bin Darian",
     role: "teacher",
-    subjects: ["Innovation & Entrepreneurship"],
+    subjects: ["Innovation & Entrepreneurship", "D&T"],
   },
-
   DT: {
-    username: "DT",
-    password: "DT123!",
-    name: "D&T Teacher",
+    username: "mohamed_irfan_darian@sst.edu.sg",
+    password: "MID123!",
+    name: "Mohamed Irfan Bin Darian",
     role: "teacher",
-    subjects: ["D&T"],
+    subjects: ["Innovation & Entrepreneurship", "D&T"],
   },
-
   ICT: {
-    username: "ICT",
-    password: "ICT123!",
-    name: "ICT Teacher",
+    username: "sim_yong_seng_stanley@sst.edu.sg",
+    password: "SYSS123!",
+    name: "Sim Yong Seng Stanley",
     role: "teacher",
     subjects: ["ICT"],
   },
-
   History: {
-    username: "History",
-    password: "History123!",
-    name: "History Teacher",
+    username: "zhang_jiaxin_genevieve@sst.edu.sg",
+    password: "ZJG123!",
+    name: "Zhang Jiaxin Genevieve",
     role: "teacher",
-    subjects: ["History"],
+    subjects: ["History", "Geography"],
   },
-
   Geography: {
-    username: "Geography",
-    password: "Geography123!",
-    name: "Geography Teacher",
+    username: "zhang_jiaxin_genevieve@sst.edu.sg",
+    password: "ZJG123!",
+    name: "Zhang Jiaxin Genevieve",
     role: "teacher",
-    subjects: ["Geography"],
+    subjects: ["History", "Geography"],
   },
 };
 
+
+/* =========================================================
+   TEACHER LOGIN NOTES
+   =========================================================
+
+   - Teacher login usernames are case-insensitive SST email addresses.
+   - The passwords in this file are local demo credentials for StudyPlanner.
+   - They are not connected to SST authentication and must not be reused for
+     school systems.
+   - Some staff members cover more than one subject in this prototype. If an
+     email appears in more than one subject entry, the login merges those
+     subject permissions into one account rather than creating duplicate IDs.
+   - The public directory lists departments and designations, not every exact
+     classroom assignment. Verify the subjects array with SST before using
+     this prototype for real school records.
+
+========================================================= */
 
 /* =========================================================
    ADMIN
@@ -199,11 +235,13 @@ const ADMIN = {
    ========================================================= */
 
 const KEYS = {
-  HOMEWORK: "studyplanner_v5_homework",
-  KNOWLEDGE: "studyplanner_v5_knowledge",
-  REPORTS: "studyplanner_v5_reports",
-  DARK: "studyplanner_v5_dark",
-  NOTIFICATIONS: "studyplanner_v5_notifications",
+  HOMEWORK: "studyplanner_v7_homework",
+  KNOWLEDGE: "studyplanner_v7_knowledge",
+  REPORTS: "studyplanner_v7_reports",
+  ACCOUNTS: "studyplanner_v7_accounts",
+  BANNED: "studyplanner_v7_banned",
+  DARK: "studyplanner_v7_dark",
+  NOTIFICATIONS: "studyplanner_v7_notifications",
 };
 
 
@@ -213,118 +251,1125 @@ const KEYS = {
 
 const DEFAULT_KNOWLEDGE = [
   {
-    id: "math-default",
+    id: "default-math",
     subject: "Math",
-    title: "Algebra Basics",
+    title: "Math Basics",
     content:
-      "When solving an equation, perform the same operation on both sides. Work step by step and check your answer.",
-    addedBy: "Math Teacher",
-    date: new Date().toISOString(),
+      "Mathematics answers should show clear working and check the final result.",
+    addedBy: "Built-in",
   },
 
   {
-    id: "science-default",
+    id: "default-science",
     subject: "Science",
-    title: "Heat Transfer",
+    title: "Science Basics",
     content:
-      "Heat can be transferred through conduction, convection and radiation.",
-    addedBy: "Science Teacher",
-    date: new Date().toISOString(),
+      "Science answers should identify the concept and explain causes, processes and effects.",
+    addedBy: "Built-in",
   },
 
   {
-    id: "history-default",
+    id: "default-english",
+    subject: "English",
+    title: "PEEL",
+    content:
+      "PEEL means Point, Evidence, Explanation and Link.",
+    addedBy: "Built-in",
+  },
+
+  {
+    id: "default-history",
     subject: "History",
     title: "History Answers",
     content:
-      "A strong history answer should explain the event, provide evidence and explain why the event was significant.",
-    addedBy: "History Teacher",
-    date: new Date().toISOString(),
+      "Strong History answers explain the event, use evidence and explain why the evidence matters.",
+    addedBy: "Built-in",
+  },
+
+  {
+    id: "default-geography",
+    subject: "Geography",
+    title: "Geography Basics",
+    content:
+      "Define the geographical concept, explain the process and give a relevant example.",
+    addedBy: "Built-in",
+  },
+
+  {
+    id: "default-chinese",
+    subject: "Chinese",
+    title: "åŽæ–‡åŸºç¡€",
+    content:
+      "å›žç­”åŽæ–‡é—®é¢˜æ—¶è¦æ³¨æ„å…³é”®è¯ã€ç»“æž„ã€è¯è¯­å’Œè¯­æ³•ã€‚",
+    addedBy: "Built-in",
+  },
+
+  {
+    id: "default-hcl",
+    subject: "HCL",
+    title: "é«˜çº§åŽæ–‡åŸºç¡€",
+    content:
+      "é«˜çº§åŽæ–‡ç­”æ¡ˆåº”è¯¥å‡†ç¡®ã€æœ‰é€»è¾‘å¹¶ä½¿ç”¨é€‚å½“çš„è¯è¯­ã€‚",
+    addedBy: "Built-in",
   },
 ];
 
 
 /* =========================================================
-   SAFE ARRAY
+   HELPERS
    ========================================================= */
 
 function safeArray(value) {
-  return Array.isArray(value) ? value : [];
+  return Array.isArray(value)
+    ? value
+    : [];
 }
 
 
-/* =========================================================
-   INAPPROPRIATE CONTENT FILTER
-   =========================================================
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-   This is deliberately a basic local filter.
-   A production version should use server-side moderation.
-   ========================================================= */
 
-const INAPPROPRIATE_PATTERNS = [
-  /\b(?:porn|pornography)\b/i,
-  /\b(?:sex|sexual)\b/i,
-  /\b(?:nude|nudity)\b/i,
-  /\b(?:xxx)\b/i,
-  /\b(?:fuck|fucking|motherfucker)\b/i,
-  /\b(?:shit)\b/i,
-  /\b(?:bitch)\b/i,
-  /\b(?:rape|raping)\b/i,
-  /\b(?:kill yourself)\b/i,
-  /\b(?:suicide)\b/i,
-  /\b(?:self[- ]?harm)\b/i,
-];
+function todayKey() {
+  const d = new Date();
 
-function isInappropriate(text) {
-  const value = String(text || "").trim();
-
-  return INAPPROPRIATE_PATTERNS.some(
-    (pattern) => pattern.test(value)
+  return (
+    d.getFullYear() +
+    "-" +
+    String(d.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(d.getDate()).padStart(2, "0")
   );
 }
 
 
 /* =========================================================
-   MAIN APP
+   MODERATION
+   ========================================================= */
+
+const INAPPROPRIATE_PATTERNS = [
+  /\b(?:porn|pornography)\b/i,
+  /\b(?:nude|nudity)\b/i,
+  /\b(?:xxx)\b/i,
+  /\b(?:sexual)\b/i,
+  /\b(?:fuck|fucking)\b/i,
+  /\b(?:kill yourself)\b/i,
+  /\b(?:suicide)\b/i,
+  /\b(?:self[- ]?harm)\b/i,
+];
+
+
+function isInappropriate(text) {
+  return INAPPROPRIATE_PATTERNS.some(
+    (pattern) =>
+      pattern.test(
+        String(text || "")
+      )
+  );
+}
+
+
+/* =========================================================
+   DEFAULT ACCOUNTS
+   ========================================================= */
+
+function makeDefaultAccounts() {
+  return [
+    {
+      id: "admin:admin",
+      key: "admin",
+      username: "admin",
+      name: "Administrator",
+      role: "admin",
+      subjects: SUBJECTS,
+      banned: false,
+    },
+
+    ...Object.values(
+      TEACHERS
+    ).filter(
+      (teacher, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.username.toLowerCase() ===
+            teacher.username.toLowerCase()
+        ) === index
+    ).map(
+      (teacher) => ({
+        id:
+          `teacher:${teacher.username.toLowerCase()}`,
+
+        key:
+          teacher.username.toLowerCase(),
+
+        username:
+          teacher.username,
+
+        name:
+          teacher.name,
+
+        password:
+          teacher.password,
+
+        role:
+          "teacher",
+
+        subjects:
+          teacher.subjects,
+
+        passwordUpdatedAt: null,
+
+        banned:
+          false,
+      })
+    ),
+  ];
+}
+
+
+/* =========================================================
+   MATH AI
+   ========================================================= */
+
+function mathAI(question) {
+  const original =
+    String(question || "").trim();
+
+  const q =
+    normalizeText(
+      original
+    );
+
+
+  if (!original) {
+    return "Please type your Maths question.";
+  }
+
+
+  /* BASIC ARITHMETIC */
+
+  const arithmetic =
+    original.match(
+      /^\s*(-?\d+(?:\.\d+)?)\s*([+\-*/xXÃ—Ã·])\s*(-?\d+(?:\.\d+)?)\s*[?=]?\s*$/
+    );
+
+
+  if (arithmetic) {
+    const a =
+      Number(
+        arithmetic[1]
+      );
+
+    const b =
+      Number(
+        arithmetic[3]
+      );
+
+    const operator =
+      arithmetic[2];
+
+    let answer;
+
+
+    if (
+      operator === "+"
+    ) {
+      answer = a + b;
+    }
+
+
+    if (
+      operator === "-"
+    ) {
+      answer = a - b;
+    }
+
+
+    if (
+      operator === "*" ||
+      operator === "x" ||
+      operator === "X" ||
+      operator === "Ã—"
+    ) {
+      answer = a * b;
+    }
+
+
+    if (
+      operator === "/" ||
+      operator === "Ã·"
+    ) {
+      if (b === 0) {
+        return (
+          "Division by zero is undefined."
+        );
+      }
+
+      answer = a / b;
+    }
+
+
+    return (
+      "Let's solve it step by step.\n\n" +
+      `${a} ${operator} ${b}\n` +
+      `= ${answer}\n\n` +
+      `Answer: ${answer}`
+    );
+  }
+
+
+  /* PERCENTAGES */
+
+  const percentage =
+    original.match(
+      /(\d+(?:\.\d+)?)\s*%\s*(?:of)\s*(\d+(?:\.\d+)?)/i
+    );
+
+
+  if (percentage) {
+    const percent =
+      Number(
+        percentage[1]
+      );
+
+    const number =
+      Number(
+        percentage[2]
+      );
+
+    const answer =
+      (percent / 100) *
+      number;
+
+
+    return (
+      `Step 1: Convert ${percent}% into a decimal.\n` +
+      `${percent}% = ${percent / 100}\n\n` +
+      `Step 2: Multiply by ${number}.\n` +
+      `${percent / 100} Ã— ${number} = ${answer}\n\n` +
+      `Answer: ${answer}`
+    );
+  }
+
+
+  /* LINEAR EQUATION */
+
+  let equation =
+    original.match(
+      /^\s*(-?\d+(?:\.\d+)?)\s*x\s*([+\-])\s*(-?\d+(?:\.\d+)?)\s*=\s*(-?\d+(?:\.\d+)?)\s*$/i
+    );
+
+
+  if (equation) {
+    const a =
+      Number(
+        equation[1]
+      );
+
+    const sign =
+      equation[2];
+
+    const b =
+      Number(
+        equation[3]
+      );
+
+    const c =
+      Number(
+        equation[4]
+      );
+
+
+    const signedB =
+      sign === "+"
+        ? b
+        : -b;
+
+
+    const x =
+      (c - signedB) /
+      a;
+
+
+    return (
+      `Equation: ${original}\n\n` +
+      `Move the constant term to the other side.\n` +
+      `${a}x = ${c - signedB}\n\n` +
+      `Divide by ${a}.\n` +
+      `x = ${x}\n\n` +
+      `Answer: x = ${x}`
+    );
+  }
+
+
+  /* SIMPLE EQUATION */
+
+  equation =
+    original.match(
+      /^\s*x\s*([+\-])\s*(-?\d+(?:\.\d+)?)\s*=\s*(-?\d+(?:\.\d+)?)\s*$/i
+    );
+
+
+  if (equation) {
+    const sign =
+      equation[1];
+
+    const b =
+      Number(
+        equation[2]
+      );
+
+    const c =
+      Number(
+        equation[3]
+      );
+
+
+    const x =
+      sign === "+"
+        ? c - b
+        : c + b;
+
+
+    return (
+      `Equation: ${original}\n\n` +
+      `x = ${x}\n\n` +
+      `Answer: x = ${x}`
+    );
+  }
+
+
+  /* FACTORISATION */
+
+  if (
+    q.includes("factor") ||
+    q.includes("factorise") ||
+    q.includes("factorize")
+  ) {
+    return (
+      "Factorisation means rewriting an expression as a product.\n\n" +
+      "First look for the greatest common factor.\n\n" +
+      "Example:\n" +
+      "6x + 9 = 3(2x + 3)\n\n" +
+      "For a quadratic, look for two numbers that multiply to the constant term and add to the x coefficient.\n\n" +
+      "Paste the exact expression for a more specific solution."
+    );
+  }
+
+
+  /* EXPANSION */
+
+  if (
+    q.includes("expand") ||
+    q.includes("bracket")
+  ) {
+    return (
+      "To expand brackets, multiply each term outside the bracket by every term inside it.\n\n" +
+      "Example:\n\n" +
+      "3(x + 4)\n" +
+      "= 3x + 12"
+    );
+  }
+
+
+  /* QUADRATIC */
+
+  if (
+    q.includes("quadratic")
+  ) {
+    return (
+      "A quadratic normally has the form:\n\n" +
+      "axÂ² + bx + c = 0\n\n" +
+      "You can solve it using factorisation, completing the square or the quadratic formula:\n\n" +
+      "x = (-b Â± âˆš(bÂ² - 4ac)) / 2a\n\n" +
+      "Paste the exact equation and I can identify the method."
+    );
+  }
+
+
+  /* AREA */
+
+  if (
+    q.includes("area")
+  ) {
+    if (
+      q.includes("rectangle")
+    ) {
+      return (
+        "Rectangle area = length Ã— width.\n\n" +
+        "Send the length and width for the exact answer."
+      );
+    }
+
+    if (
+      q.includes("triangle")
+    ) {
+      return (
+        "Triangle area = Â½ Ã— base Ã— height."
+      );
+    }
+
+    if (
+      q.includes("circle")
+    ) {
+      return (
+        "Circle area = Ï€rÂ²."
+      );
+    }
+
+    return (
+      "Identify the shape first, then use its area formula."
+    );
+  }
+
+
+  /* VOLUME */
+
+  if (
+    q.includes("volume")
+  ) {
+    return (
+      "Cuboid volume = length Ã— width Ã— height.\n\n" +
+      "Cylinder volume = Ï€rÂ²h."
+    );
+  }
+
+
+  /* DENSITY */
+
+  if (
+    q.includes("density")
+  ) {
+    return (
+      "Density = mass Ã· volume.\n\n" +
+      "For example:\n" +
+      "100 g Ã· 20 cmÂ³ = 5 g/cmÂ³."
+    );
+  }
+
+
+  /* FRACTIONS */
+
+  if (
+    q.includes("fraction")
+  ) {
+    return (
+      "For fractions:\n\n" +
+      "Addition/subtraction â†’ find a common denominator.\n\n" +
+      "Multiplication â†’ multiply numerator by numerator and denominator by denominator.\n\n" +
+      "Division â†’ multiply by the reciprocal."
+    );
+  }
+
+
+  return (
+    "I read your Maths question.\n\n" +
+    "To give you the exact answer, I need the complete equation, numbers, measurements or diagram details.\n\n" +
+    "Paste the full question exactly as it appears."
+  );
+}
+
+
+/* =========================================================
+   SCIENCE AI
+   ========================================================= */
+
+function scienceAI(question) {
+  const q =
+    normalizeText(
+      question
+    );
+
+
+  if (
+    q.includes("heat") ||
+    q.includes("conduction") ||
+    q.includes("convection") ||
+    q.includes("radiation")
+  ) {
+    return (
+      "Heat moves from hotter regions to cooler regions.\n\n" +
+      "Conduction happens through direct contact.\n\n" +
+      "Convection happens through movement in liquids and gases.\n\n" +
+      "Radiation transfers energy using electromagnetic waves and does not require a medium."
+    );
+  }
+
+
+  if (
+    q.includes("density")
+  ) {
+    return (
+      "Density = mass Ã· volume.\n\n" +
+      "It tells us how much mass is packed into a certain volume."
+    );
+  }
+
+
+  if (
+    q.includes("refraction")
+  ) {
+    return (
+      "Refraction is the change in direction of light when it moves from one medium to another because its speed changes."
+    );
+  }
+
+
+  if (
+    q.includes("force")
+  ) {
+    return (
+      "A force is a push or pull. It can change an object's speed, direction or shape. Force is measured in newtons (N)."
+    );
+  }
+
+
+  if (
+    q.includes("moment")
+  ) {
+    return (
+      "A moment is the turning effect of a force around a pivot.\n\n" +
+      "Moment = force Ã— perpendicular distance from the pivot."
+    );
+  }
+
+
+  if (
+    q.includes("photosynthesis")
+  ) {
+    return (
+      "Photosynthesis is the process where green plants use light energy to make glucose from carbon dioxide and water. Oxygen is released."
+    );
+  }
+
+
+  if (
+    q.includes("cell") ||
+    q.includes("cells")
+  ) {
+    return (
+      "Cells are the basic units of life.\n\n" +
+      "Animal cells commonly contain a nucleus, cytoplasm, cell membrane and mitochondria.\n\n" +
+      "Plant cells also have a cell wall, chloroplasts and a large permanent vacuole."
+    );
+  }
+
+
+  if (
+    q.includes("digestion")
+  ) {
+    return (
+      "Digestion breaks large food molecules into smaller soluble molecules that can be absorbed.\n\n" +
+      "Mechanical digestion physically breaks food apart. Chemical digestion uses enzymes."
+    );
+  }
+
+
+  if (
+    q.includes("reproduction")
+  ) {
+    return (
+      "Reproduction is the process by which organisms produce new organisms. It may be sexual or asexual."
+    );
+  }
+
+
+  return (
+    "For Science, identify the scientific concept, explain the process, then connect the cause to the effect.\n\n" +
+    "Paste the complete question for a more specific explanation."
+  );
+}
+
+
+/* =========================================================
+   ENGLISH AI
+   ========================================================= */
+
+function englishAI(question) {
+  const q =
+    normalizeText(
+      question
+    );
+
+
+  if (
+    q.includes("peel")
+  ) {
+    return (
+      "PEEL means:\n\n" +
+      "P â€” Point\n" +
+      "E â€” Evidence\n" +
+      "E â€” Explanation\n" +
+      "L â€” Link\n\n" +
+      "Make a point, support it with evidence, explain the evidence and link it back to the question."
+    );
+  }
+
+
+  if (
+    q.includes("anaphora")
+  ) {
+    return (
+      "Anaphora is repetition at the beginning of successive clauses or sentences. It creates emphasis, rhythm and emotional impact."
+    );
+  }
+
+
+  if (
+    q.includes("metaphor")
+  ) {
+    return (
+      "A metaphor makes a direct comparison without using 'like' or 'as'."
+    );
+  }
+
+
+  if (
+    q.includes("simile")
+  ) {
+    return (
+      "A simile compares two things using words such as 'like' or 'as'."
+    );
+  }
+
+
+  if (
+    q.includes("comprehension")
+  ) {
+    return (
+      "For comprehension:\n\n" +
+      "1. Identify the keywords in the question.\n" +
+      "2. Find the relevant evidence in the passage.\n" +
+      "3. Explain your answer clearly.\n" +
+      "4. Answer exactly what was asked."
+    );
+  }
+
+
+  if (
+    q.includes("essay") ||
+    q.includes("composition")
+  ) {
+    return (
+      "For a strong essay or composition:\n\n" +
+      "1. Understand the question.\n" +
+      "2. Plan your main ideas.\n" +
+      "3. Organise clear paragraphs.\n" +
+      "4. Use specific evidence or examples.\n" +
+      "5. Explain your ideas.\n" +
+      "6. Check grammar and spelling."
+    );
+  }
+
+
+  if (
+    q.includes("grammar") ||
+    q.includes("tense")
+  ) {
+    return (
+      "Check subject-verb agreement, tense consistency, sentence structure and punctuation."
+    );
+  }
+
+
+  return (
+    "For English, identify exactly what the question asks, make a clear point, support it with evidence or an example and explain your reasoning."
+  );
+}
+
+
+/* =========================================================
+   CHINESE AI
+   ========================================================= */
+
+function chineseAI(question) {
+  const q =
+    String(
+      question || ""
+    );
+
+
+  const lower =
+    q.toLowerCase();
+
+
+  if (
+    lower.includes("email") ||
+    q.includes("ç”µé‚®") ||
+    q.includes("é‚®ä»¶")
+  ) {
+    return (
+      "å†™ç”µé‚®æ—¶ï¼Œå…ˆç¡®å®šæ”¶ä»¶äººã€ç›®çš„å’Œè¯­æ°”ã€‚\n\n" +
+      "æ­£å¼ç”µé‚®è¦æœ‰ç¤¼è²Œã€ç»“æž„æ¸…æ¥šï¼›éžæ­£å¼ç”µé‚®å¯ä»¥æ¯”è¾ƒè‡ªç„¶ã€‚\n\n" +
+      "æœ€åŽæ£€æŸ¥æ ¼å¼ã€è¯è¯­å’Œè¯­æ³•ã€‚"
+    );
+  }
+
+
+  if (
+    q.includes("ä½œæ–‡") ||
+    lower.includes("composition")
+  ) {
+    return (
+      "å†™ä½œæ–‡å‰å…ˆç¡®å®šä¸­å¿ƒæ€æƒ³ï¼Œç„¶åŽå®‰æŽ’å¼€å¤´ã€å‘å±•å’Œç»“å°¾ã€‚\n\n" +
+      "å¯ä»¥åŠ å…¥äººç‰©çš„åŠ¨ä½œã€è¯­è¨€ã€å¿ƒç†å’ŒçŽ¯å¢ƒæå†™ï¼Œè®©å†…å®¹æ›´åŠ å…·ä½“ã€‚"
+    );
+  }
+
+
+  if (
+    q.includes("é˜…è¯»") ||
+    lower.includes("comprehension")
+  ) {
+    return (
+      "å…ˆæ‰¾å‡ºé¢˜ç›®çš„å…³é”®è¯ï¼Œå†å›žåˆ°æ–‡ç« å¯»æ‰¾ç›¸å…³ä¿¡æ¯ã€‚\n\n" +
+      "å›žç­”æ—¶è¦æ ¹æ®é¢˜ç›®è¦æ±‚å®Œæ•´ä½œç­”ï¼Œå¹¶ä½¿ç”¨æ–‡ç« ä¸­çš„è¯æ®æ”¯æŒç­”æ¡ˆã€‚"
+    );
+  }
+
+
+  return (
+    "å…ˆæ‰¾å‡ºé¢˜ç›®çš„å…³é”®è¯ï¼Œå†ç»„ç»‡å®Œæ•´ã€æœ‰æ¡ç†çš„ç­”æ¡ˆï¼Œå¹¶ä½¿ç”¨åˆé€‚çš„è¯è¯­å’Œä¾‹å­ã€‚"
+  );
+}
+
+
+/* =========================================================
+   HISTORY AI
+   ========================================================= */
+
+function historyAI(question) {
+  const q =
+    normalizeText(
+      question
+    );
+
+
+  if (
+    q.includes("source") ||
+    q.includes("reliability")
+  ) {
+    return (
+      "For a History source question, consider:\n\n" +
+      "1. What does the source say?\n" +
+      "2. Who created it?\n" +
+      "3. Why was it created?\n" +
+      "4. What was happening at the time?\n" +
+      "5. What can the source prove?"
+    );
+  }
+
+
+  if (
+    q.includes("cause") ||
+    q.includes("why")
+  ) {
+    return (
+      "For a causes question, identify several factors, explain how each contributed to the event and compare which factors were most important."
+    );
+  }
+
+
+  if (
+    q.includes("significant") ||
+    q.includes("importance")
+  ) {
+    return (
+      "For a significance question, explain what changed, who was affected and why the development mattered."
+    );
+  }
+
+
+  return (
+    "For History, explain what happened, provide specific evidence and explain why the evidence matters."
+  );
+}
+
+
+/* =========================================================
+   GEOGRAPHY AI
+   ========================================================= */
+
+function geographyAI(question) {
+  const q =
+    normalizeText(
+      question
+    );
+
+
+  if (
+    q.includes("weather") ||
+    q.includes("climate")
+  ) {
+    return (
+      "Weather describes short-term atmospheric conditions.\n\n" +
+      "Climate describes long-term patterns of weather."
+    );
+  }
+
+
+  if (
+    q.includes("sustainable") ||
+    q.includes("sustainability")
+  ) {
+    return (
+      "Sustainability means meeting present needs while protecting resources and opportunities for future generations."
+    );
+  }
+
+
+  if (
+    q.includes("food waste")
+  ) {
+    return (
+      "Food waste can be caused by over-purchasing, poor storage, large portions and food being rejected during production or retail.\n\n" +
+      "Reducing food waste saves resources and improves resource efficiency."
+    );
+  }
+
+
+  return (
+    "For Geography, define the key term, explain the process, give a relevant example and link the example back to the question."
+  );
+}
+
+
+/* =========================================================
+   BUILT-IN AI ROUTER
+   ========================================================= */
+
+function builtInAI(
+  subject,
+  question,
+  knowledge
+) {
+  let answer;
+
+
+  switch (
+    subject
+  ) {
+    case "Math":
+      answer =
+        mathAI(
+          question
+        );
+      break;
+
+    case "Science":
+      answer =
+        scienceAI(
+          question
+        );
+      break;
+
+    case "English":
+      answer =
+        englishAI(
+          question
+        );
+      break;
+
+    case "Chinese":
+    case "HCL":
+      answer =
+        chineseAI(
+          question
+        );
+      break;
+
+    case "History":
+      answer =
+        historyAI(
+          question
+        );
+      break;
+
+    case "Geography":
+      answer =
+        geographyAI(
+          question
+        );
+      break;
+
+    case "ICT":
+      answer =
+        "For ICT, identify the input, processing and output. Then explain how the algorithm or technology solves the problem.";
+      break;
+
+    case "D&T":
+      answer =
+        "For D&T, identify the design problem, user needs and constraints. Then explain the suitable materials, processes, testing and improvements.";
+      break;
+
+    case "Physical Education":
+      answer =
+        "For PE, identify the fitness component, movement skill or health concept, then explain the relevant principle and give an example.";
+      break;
+
+    case "Innovation & Entrepreneurship":
+      answer =
+        "Start with the problem and target user. Then explain the proposed solution, value, testing and feasibility.";
+      break;
+
+    case "Malay":
+      answer =
+        "Kenal pasti kata kunci dalam soalan, kemudian jawab dengan ayat yang lengkap dan jelas. Berikan huraian atau contoh yang sesuai.";
+      break;
+
+    default:
+      answer =
+        "Identify the key concept, explain it clearly and give an example.";
+  }
+
+
+  /*
+   OPTIONAL TEACHER KNOWLEDGE
+   */
+
+  const relevant =
+    safeArray(
+      knowledge
+    )
+      .filter(
+        (item) =>
+          item.subject ===
+          subject &&
+          item.addedBy !==
+            "Built-in"
+      )
+      .slice(
+        0,
+        3
+      );
+
+
+  if (
+    relevant.length >
+    0
+  ) {
+    answer +=
+      "\n\nTeacher knowledge:\n\n" +
+      relevant
+        .map(
+          (item) =>
+            `â€¢ ${item.title}: ${item.content}`
+        )
+        .join(
+          "\n\n"
+        );
+  }
+
+
+  return answer;
+}
+
+
+/* =========================================================
+   APP
    ========================================================= */
 
 export default function App() {
-  const [loginMode, setLoginMode] =
-    useState("student");
-
-  const [currentUser, setCurrentUser] =
-    useState(null);
-
-  const [page, setPage] =
-    useState("home");
-
-  const [homework, setHomework] =
-    useState([]);
-
-  const [knowledge, setKnowledge] =
-    useState([]);
-
-  const [reports, setReports] =
-    useState([]);
-
-  const [darkMode, setDarkMode] =
-    useState(false);
-
-  const [notifications, setNotifications] =
-    useState(true);
-
-  const [ready, setReady] =
-    useState(false);
+  const [
+    loginMode,
+    setLoginMode,
+  ] = useState(
+    "student"
+  );
 
 
-  /* =======================================================
-     LOAD
-     ======================================================= */
+  const [
+    currentUser,
+    setCurrentUser,
+  ] = useState(
+    null
+  );
+
+
+  const [
+    page,
+    setPage,
+  ] = useState(
+    "home"
+  );
+
+
+  const [
+    homework,
+    setHomework,
+  ] = useState(
+    []
+  );
+
+
+  const [
+    knowledge,
+    setKnowledge,
+  ] = useState(
+    DEFAULT_KNOWLEDGE
+  );
+
+
+  const [
+    reports,
+    setReports,
+  ] = useState(
+    []
+  );
+
+
+  const [
+    accounts,
+    setAccounts,
+  ] = useState(
+    makeDefaultAccounts()
+  );
+
+
+  const [
+    bannedAccounts,
+    setBannedAccounts,
+  ] = useState(
+    []
+  );
+
+
+  const [
+    darkMode,
+    setDarkMode,
+  ] = useState(
+    false
+  );
+
+
+  const [
+    notifications,
+    setNotifications,
+  ] = useState(
+    true
+  );
+
+
+  const [
+    ready,
+    setReady,
+  ] = useState(
+    false
+  );
+
 
   useEffect(() => {
     loadData();
   }, []);
 
+
+  /* =======================================================
+     LOAD DATA
+     ======================================================= */
 
   async function loadData() {
     try {
@@ -343,6 +1388,16 @@ export default function App() {
           KEYS.REPORTS
         );
 
+      const savedAccounts =
+        await AsyncStorage.getItem(
+          KEYS.ACCOUNTS
+        );
+
+      const savedBanned =
+        await AsyncStorage.getItem(
+          KEYS.BANNED
+        );
+
       const savedDark =
         await AsyncStorage.getItem(
           KEYS.DARK
@@ -354,41 +1409,93 @@ export default function App() {
         );
 
 
-      if (savedHomework) {
+      if (
+        savedHomework
+      ) {
         setHomework(
           safeArray(
-            JSON.parse(savedHomework)
+            JSON.parse(
+              savedHomework
+            )
           )
         );
       }
 
 
-      if (savedKnowledge) {
+      if (
+        savedKnowledge
+      ) {
         setKnowledge(
           safeArray(
-            JSON.parse(savedKnowledge)
+            JSON.parse(
+              savedKnowledge
+            )
           )
-        );
-      } else {
-        setKnowledge(
-          DEFAULT_KNOWLEDGE
         );
       }
 
 
-      if (savedReports) {
+      if (
+        savedReports
+      ) {
         setReports(
           safeArray(
-            JSON.parse(savedReports)
+            JSON.parse(
+              savedReports
+            )
           )
         );
       }
 
 
-      if (savedDark !== null) {
+      if (
+        savedAccounts
+      ) {
+        const saved =
+          safeArray(
+            JSON.parse(
+              savedAccounts
+            )
+          );
+
+        const defaults =
+          makeDefaultAccounts();
+
+        const merged = defaults.map((defaultItem) => {
+          const savedItem = saved.find((item) => item.id === defaultItem.id);
+          return savedItem ? { ...defaultItem, ...savedItem } : defaultItem;
+        }).concat(
+          saved.filter((savedItem) => !defaults.some((defaultItem) => defaultItem.id === savedItem.id))
+        );
+
+        setAccounts(
+          merged
+        );
+      }
+
+
+      if (
+        savedBanned
+      ) {
+        setBannedAccounts(
+          safeArray(
+            JSON.parse(
+              savedBanned
+            )
+          )
+        );
+      }
+
+
+      if (
+        savedDark !==
+        null
+      ) {
         setDarkMode(
           Boolean(
-            JSON.parse(savedDark)
+            JSON.parse(
+              savedDark
+            )
           )
         );
       }
@@ -407,28 +1514,34 @@ export default function App() {
         );
       }
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.log(
-        "Load error:",
+        "Load error",
         error
       );
     }
 
-    setReady(true);
+
+    setReady(
+      true
+    );
   }
 
 
   /* =======================================================
-     SAVE HOMEWORK
+     SAVE
      ======================================================= */
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready)
+      return;
 
     AsyncStorage.setItem(
       KEYS.HOMEWORK,
       JSON.stringify(
-        safeArray(homework)
+        homework
       )
     );
   }, [
@@ -437,17 +1550,14 @@ export default function App() {
   ]);
 
 
-  /* =======================================================
-     SAVE KNOWLEDGE
-     ======================================================= */
-
   useEffect(() => {
-    if (!ready) return;
+    if (!ready)
+      return;
 
     AsyncStorage.setItem(
       KEYS.KNOWLEDGE,
       JSON.stringify(
-        safeArray(knowledge)
+        knowledge
       )
     );
   }, [
@@ -456,17 +1566,14 @@ export default function App() {
   ]);
 
 
-  /* =======================================================
-     SAVE REPORTS
-     ======================================================= */
-
   useEffect(() => {
-    if (!ready) return;
+    if (!ready)
+      return;
 
     AsyncStorage.setItem(
       KEYS.REPORTS,
       JSON.stringify(
-        safeArray(reports)
+        reports
       )
     );
   }, [
@@ -475,13 +1582,52 @@ export default function App() {
   ]);
 
 
+  useEffect(() => {
+    if (!ready)
+      return;
+
+    AsyncStorage.setItem(
+      KEYS.ACCOUNTS,
+      JSON.stringify(
+        accounts
+      )
+    );
+  }, [
+    accounts,
+    ready,
+  ]);
+
+
+  useEffect(() => {
+    if (!ready)
+      return;
+
+    AsyncStorage.setItem(
+      KEYS.BANNED,
+      JSON.stringify(
+        bannedAccounts
+      )
+    );
+  }, [
+    bannedAccounts,
+    ready,
+  ]);
+
+
   /* =======================================================
      LOGIN
      ======================================================= */
 
-  function studentLogin(email) {
+  function studentLogin(
+    email
+  ) {
     const clean =
-      email.trim().toLowerCase();
+      String(
+        email || ""
+      )
+        .trim()
+        .toLowerCase();
+
 
     if (
       !STUDENT_EMAIL_REGEX.test(
@@ -497,14 +1643,79 @@ export default function App() {
     }
 
 
-    setCurrentUser({
-      role: "student",
-      email: clean,
-      name:
-        clean.split("@")[0],
-    });
+    if (
+      bannedAccounts.includes(
+        clean
+      )
+    ) {
+      Alert.alert(
+        "Account banned",
+        "This account has been banned by the administrator."
+      );
 
-    setPage("home");
+      return;
+    }
+
+
+    const student =
+      {
+        id:
+          `student:${clean}`,
+
+        key:
+          clean,
+
+        email:
+          clean,
+
+        name:
+          clean.split(
+            "@"
+          )[0],
+
+        role:
+          "student",
+
+        subjects:
+          SUBJECTS,
+
+        banned:
+          false,
+      };
+
+
+    setAccounts(
+      (old) => {
+        const list =
+          safeArray(
+            old
+          );
+
+        if (
+          list.some(
+            (item) =>
+              item.id ===
+              student.id
+          )
+        ) {
+          return list;
+        }
+
+        return [
+          ...list,
+          student,
+        ];
+      }
+    );
+
+
+    setCurrentUser(
+      student
+    );
+
+    setPage(
+      "home"
+    );
   }
 
 
@@ -513,12 +1724,19 @@ export default function App() {
     password
   ) {
     const clean =
-      username.trim();
+      String(
+        username || ""
+      ).trim();
 
+    const key =
+      clean.toLowerCase();
+
+
+    /* ADMIN */
 
     if (
-      clean.toLowerCase() ===
-      ADMIN.username.toLowerCase()
+      key ===
+      ADMIN.username
     ) {
       if (
         password !==
@@ -535,21 +1753,45 @@ export default function App() {
 
       setCurrentUser({
         ...ADMIN,
+
+        id:
+          "admin:admin",
+
+        key:
+          "admin",
+
+        banned:
+          false,
       });
 
-      setPage("home");
+
+      setPage(
+        "home"
+      );
+
       return;
     }
 
 
-    const teacher =
-      Object.values(
-        TEACHERS
-      ).find(
-        (item) =>
-          item.username.toLowerCase() ===
-          clean.toLowerCase()
+    /* TEACHER */
+
+    const matchingTeachers =
+      Object.values(TEACHERS).filter(
+        (item) => item.username.toLowerCase() === key
       );
+    const savedTeacher = safeArray(accounts).find(
+      (item) => item.role === "teacher" && String(item.username || "").toLowerCase() === key
+    );
+    const teacher = matchingTeachers.length
+      ? {
+          ...matchingTeachers[0],
+          ...(savedTeacher || {}),
+          username: matchingTeachers[0].username,
+          name: savedTeacher?.name || matchingTeachers[0].name,
+          password: savedTeacher?.password || matchingTeachers[0].password,
+          subjects: [...new Set(matchingTeachers.flatMap((item) => item.subjects || []))],
+        }
+      : null;
 
 
     if (!teacher) {
@@ -568,55 +1810,233 @@ export default function App() {
     ) {
       Alert.alert(
         "Login failed",
-        "Incorrect password."
+        "Incorrect teacher password."
       );
 
       return;
     }
 
 
-    setCurrentUser({
-      ...teacher,
-    });
+    if (
+      bannedAccounts.includes(
+        key
+      )
+    ) {
+      Alert.alert(
+        "Account banned",
+        "This teacher account has been banned by the administrator."
+      );
 
-    setPage("home");
-  }
+      return;
+    }
 
 
-  function logout() {
-    setCurrentUser(null);
-    setPage("home");
-    setLoginMode("student");
-  }
+    const teacherUser =
+      {
+        ...teacher,
+
+        id:
+          `teacher:${key}`,
+
+        key,
+
+        banned:
+          false,
+      };
 
 
-  /* =======================================================
-     ADD HOMEWORK
-     ======================================================= */
+    setAccounts(
+      (old) => {
+        const list =
+          safeArray(
+            old
+          );
 
-  function addHomework(item) {
-    setHomework((old) => [
-      ...safeArray(old),
-      item,
-    ]);
+        const existingIndex = list.findIndex(
+          (item) => item.id === teacherUser.id
+        );
+        if (existingIndex >= 0) {
+          return list.map((item, index) => index === existingIndex
+            ? { ...item, ...teacherUser, password: teacherUser.password || item.password }
+            : item
+          );
+        }
 
-    Alert.alert(
-      "Homework added",
-      "The homework has been added to StudyPlanner."
+        return [
+          ...list,
+          teacherUser,
+        ];
+      }
+    );
+
+
+    setCurrentUser(
+      teacherUser
+    );
+
+    setPage(
+      "home"
     );
   }
 
 
   /* =======================================================
-     DELETE HOMEWORK
+     LOGOUT
      ======================================================= */
 
-  function deleteHomework(id) {
-    setHomework((old) =>
-      safeArray(old).filter(
-        (item) =>
-          item.id !== id
+  function logout() {
+    setCurrentUser(
+      null
+    );
+
+    setPage(
+      "home"
+    );
+
+    setLoginMode(
+      "student"
+    );
+  }
+
+
+  /* =======================================================
+     BAN / UNBAN
+     ======================================================= */
+
+  function toggleAccountBan(
+    account
+  ) {
+    if (
+      currentUser?.role !==
+      "admin"
+    ) {
+      return;
+    }
+
+
+    const key =
+      String(
+        account.key ||
+          account.email ||
+          account.username ||
+          ""
       )
+        .trim()
+        .toLowerCase();
+
+
+    if (
+      !key ||
+      key ===
+        ADMIN.username
+    ) {
+      Alert.alert(
+        "Not allowed",
+        "The administrator account cannot be banned."
+      );
+
+      return;
+    }
+
+
+    const currentlyBanned =
+      bannedAccounts.includes(
+        key
+      );
+
+
+    if (
+      currentlyBanned
+    ) {
+      setBannedAccounts(
+        (old) =>
+          safeArray(
+            old
+          ).filter(
+            (item) =>
+              item !==
+              key
+          )
+      );
+
+      setAccounts(
+        (old) =>
+          safeArray(
+            old
+          ).map(
+            (item) =>
+              item.key ===
+              key
+                ? {
+                    ...item,
+                    banned:
+                      false,
+                  }
+                : item
+          )
+      );
+
+    } else {
+
+      setBannedAccounts(
+        (old) => [
+          ...safeArray(
+            old
+          ),
+          key,
+        ]
+      );
+
+      setAccounts(
+        (old) =>
+          safeArray(
+            old
+          ).map(
+            (item) =>
+              item.key ===
+              key
+                ? {
+                    ...item,
+                    banned:
+                      true,
+                  }
+                : item
+          )
+      );
+    }
+  }
+
+
+  /* =======================================================
+     HOMEWORK
+     ======================================================= */
+
+  function addHomework(
+    item
+  ) {
+    setHomework(
+      (old) => [
+        ...safeArray(
+          old
+        ),
+        item,
+      ]
+    );
+  }
+
+
+  function deleteHomework(
+    id
+  ) {
+    setHomework(
+      (old) =>
+        safeArray(
+          old
+        ).filter(
+          (item) =>
+            item.id !==
+            id
+        )
     );
   }
 
@@ -625,61 +2045,38 @@ export default function App() {
      MODERATION REPORT
      ======================================================= */
 
-  function reportInappropriateMessage(
+  function reportMessage(
     message
   ) {
-    const report = {
-      id:
-        Date.now().toString() +
-        Math.random(),
+    const report =
+      {
+        id:
+          `${Date.now()}-${Math.random()}`,
 
-      type:
-        "inappropriate_ai_message",
+        type:
+          "AI moderation",
 
-      message,
+        student:
+          currentUser?.email ||
+          "Unknown",
 
-      student:
-        currentUser?.email ||
-        "Unknown student",
+        message,
 
-      date:
-        new Date().toISOString(),
+        date:
+          new Date().toISOString(),
 
-      status: "unread",
-    };
-
-
-    setReports((old) => [
-      report,
-      ...safeArray(old),
-    ]);
-  }
+        status:
+          "unread",
+      };
 
 
-  /* =======================================================
-     SETTINGS
-     ======================================================= */
-
-  async function changeDarkMode(
-    value
-  ) {
-    setDarkMode(value);
-
-    await AsyncStorage.setItem(
-      KEYS.DARK,
-      JSON.stringify(value)
-    );
-  }
-
-
-  async function changeNotifications(
-    value
-  ) {
-    setNotifications(value);
-
-    await AsyncStorage.setItem(
-      KEYS.NOTIFICATIONS,
-      JSON.stringify(value)
+    setReports(
+      (old) => [
+        report,
+        ...safeArray(
+          old
+        ),
+      ]
     );
   }
 
@@ -695,13 +2092,15 @@ export default function App() {
           styles.loading
         }
       >
+
         <Text
           style={
             styles.loadingEmoji
           }
         >
-          📚
+          ðŸ“š
         </Text>
+
 
         <Text
           style={
@@ -711,9 +2110,11 @@ export default function App() {
           StudyPlanner
         </Text>
 
+
         <Text>
           Loading...
         </Text>
+
       </SafeAreaView>
     );
   }
@@ -726,8 +2127,12 @@ export default function App() {
   if (!currentUser) {
     return (
       <LoginScreen
-        mode={loginMode}
-        setMode={setLoginMode}
+        mode={
+          loginMode
+        }
+        setMode={
+          setLoginMode
+        }
         onStudentLogin={
           studentLogin
         }
@@ -736,19 +2141,6 @@ export default function App() {
         }
       />
     );
-  }
-
-
-  /* =======================================================
-     TEACHER CANNOT OPEN AI CHAT
-     ======================================================= */
-
-  if (
-    currentUser.role ===
-      "teacher" &&
-    page === "ai"
-  ) {
-    setPage("home");
   }
 
 
@@ -764,6 +2156,7 @@ export default function App() {
           styles.darkApp,
       ]}
     >
+
       <StatusBar
         barStyle={
           darkMode
@@ -780,7 +2173,9 @@ export default function App() {
             styles.darkCard,
         ]}
       >
+
         <View>
+
           <Text
             style={[
               styles.appTitle,
@@ -791,6 +2186,7 @@ export default function App() {
             StudyPlanner
           </Text>
 
+
           <Text
             style={[
               styles.userText,
@@ -798,8 +2194,11 @@ export default function App() {
                 styles.darkSecondary,
             ]}
           >
-            {currentUser.name}
+            {
+              currentUser.name
+            }
           </Text>
+
         </View>
 
 
@@ -807,8 +2206,11 @@ export default function App() {
           style={
             styles.logoutButton
           }
-          onPress={logout}
+          onPress={
+            logout
+          }
         >
+
           <Text
             style={
               styles.logoutText
@@ -816,28 +2218,46 @@ export default function App() {
           >
             Logout
           </Text>
+
         </TouchableOpacity>
+
       </View>
 
 
       <View
-        style={styles.content}
+        style={
+          styles.content
+        }
       >
 
-        {page === "home" && (
+        {page ===
+          "home" && (
           <HomePage
-            user={currentUser}
-            homework={homework}
-            setPage={setPage}
+            user={
+              currentUser
+            }
+            homework={
+              homework
+            }
+            setPage={
+              setPage
+            }
           />
         )}
 
 
-        {page === "homework" && (
+        {page ===
+          "homework" && (
           <HomeworkPage
-            user={currentUser}
-            homework={homework}
-            onAdd={addHomework}
+            user={
+              currentUser
+            }
+            homework={
+              homework
+            }
+            onAdd={
+              addHomework
+            }
             onDelete={
               deleteHomework
             }
@@ -845,83 +2265,192 @@ export default function App() {
         )}
 
 
-        {page === "calendar" && (
+        {page ===
+          "calendar" && (
           <CalendarPage
-            homework={homework}
+            homework={
+              homework
+            }
           />
         )}
 
 
-        {page === "ai" &&
+        {page ===
+          "ai" &&
           currentUser.role ===
             "student" && (
-            <AIPage
-              user={currentUser}
-              knowledge={knowledge}
-              onReport={
-                reportInappropriateMessage
-              }
-            />
-          )}
+          <AIPage
+            knowledge={
+              knowledge
+            }
+            onReport={
+              reportMessage
+            }
+          />
+        )}
 
 
-        {page === "knowledge" &&
+        {page ===
+          "knowledge" &&
           currentUser.role !==
             "student" && (
-            <KnowledgePage
-              user={currentUser}
-              knowledge={knowledge}
-              setKnowledge={
-                setKnowledge
-              }
-            />
-          )}
+          <KnowledgePage
+            user={
+              currentUser
+            }
+            knowledge={
+              knowledge
+            }
+            setKnowledge={
+              setKnowledge
+            }
+          />
+        )}
 
 
-        {page === "reports" &&
+        {page ===
+          "reports" &&
           currentUser.role ===
             "admin" && (
-            <ReportsPage
-              reports={reports}
-              setReports={
-                setReports
-              }
-            />
-          )}
+          <ReportsPage
+            reports={
+              reports
+            }
+            setReports={
+              setReports
+            }
+          />
+        )}
 
 
-        {page === "settings" && (
+        {page ===
+          "accounts" &&
+          currentUser.role ===
+            "admin" && (
+          <AccountsPage
+            accounts={
+              accounts
+            }
+            bannedAccounts={
+              bannedAccounts
+            }
+            onToggleBan={
+              toggleAccountBan
+            }
+          />
+        )}
+
+
+        {page ===
+          "settings" && (
           <SettingsPage
-            user={currentUser}
-            darkMode={darkMode}
+            user={
+              currentUser
+            }
+            darkMode={
+              darkMode
+            }
             notifications={
               notifications
             }
             setDarkMode={
-              changeDarkMode
+              updateDarkMode
             }
             setNotifications={
-              changeNotifications
+              updateNotifications
+            }
+            onChangePassword={
+              updateTeacherPassword
             }
           />
         )}
+
       </View>
 
 
       <NavigationBar
-        page={page}
-        setPage={setPage}
-        user={currentUser}
+        page={
+          page
+        }
+        setPage={
+          setPage
+        }
+        user={
+          currentUser
+        }
         reportCount={
           reports.filter(
-            (r) =>
-              r.status ===
+            (item) =>
+              item.status ===
               "unread"
           ).length
         }
       />
+
     </SafeAreaView>
   );
+
+
+  async function updateTeacherPassword(user, currentPassword, newPassword) {
+    const key = String(user?.username || user?.key || "").trim().toLowerCase();
+    const existing = safeArray(accounts).find(
+      (item) => item.role === "teacher" && String(item.username || "").toLowerCase() === key
+    );
+    const activePassword = existing?.password || user?.password;
+    if (activePassword !== currentPassword) {
+      Alert.alert("Password not changed", "Your current password is incorrect.");
+      return;
+    }
+    const updatedAt = new Date().toISOString();
+    const updatedAccounts = safeArray(accounts).map((item) =>
+      item.role === "teacher" && String(item.username || "").toLowerCase() === key
+        ? { ...item, password: newPassword, passwordUpdatedAt: updatedAt }
+        : item
+    );
+    // Also update the active session so the new password can be used immediately.
+    setAccounts(updatedAccounts);
+    setCurrentUser((old) => old && old.role === "teacher" && String(old.username || "").toLowerCase() === key
+      ? { ...old, password: newPassword, passwordUpdatedAt: updatedAt }
+      : old
+    );
+    try {
+      await AsyncStorage.setItem(KEYS.ACCOUNTS, JSON.stringify(updatedAccounts));
+      Alert.alert("Password updated", "Your new password is saved. The admin Accounts page will reflect this update on this installation.");
+    } catch (error) {
+      Alert.alert("Could not save password", "Please try again.");
+    }
+  }
+
+  async function updateDarkMode(
+    value
+  ) {
+    setDarkMode(
+      value
+    );
+
+    await AsyncStorage.setItem(
+      KEYS.DARK,
+      JSON.stringify(
+        value
+      )
+    );
+  }
+
+
+  async function updateNotifications(
+    value
+  ) {
+    setNotifications(
+      value
+    );
+
+    await AsyncStorage.setItem(
+      KEYS.NOTIFICATIONS,
+      JSON.stringify(
+        value
+      )
+    );
+  }
 }
 
 
@@ -935,14 +2464,22 @@ function LoginScreen({
   onStudentLogin,
   onTeacherLogin,
 }) {
-  const [email, setEmail] =
-    useState("");
+  const [
+    email,
+    setEmail,
+  ] = useState("");
 
-  const [username, setUsername] =
-    useState("");
 
-  const [password, setPassword] =
-    useState("");
+  const [
+    username,
+    setUsername,
+  ] = useState("");
+
+
+  const [
+    password,
+    setPassword,
+  ] = useState("");
 
 
   return (
@@ -951,72 +2488,100 @@ function LoginScreen({
         styles.loginContainer
       }
     >
+
       <ScrollView
         contentContainerStyle={
           styles.loginContent
         }
+        keyboardShouldPersistTaps="handled"
       >
 
         <Text
-          style={styles.loginLogo}
+          style={
+            styles.loginLogo
+          }
         >
-          📚
+          ðŸ“š
         </Text>
 
+
         <Text
-          style={styles.loginTitle}
+          style={
+            styles.loginTitle
+          }
         >
           StudyPlanner
         </Text>
 
+
         <Text
-          style={styles.loginSubtitle}
+          style={
+            styles.loginSubtitle
+          }
         >
-          School planner • Homework •
-          Teacher-powered study help
+          School planner â€¢ Homework â€¢ AI study help
         </Text>
 
 
         <View
-          style={styles.loginSwitch}
+          style={
+            styles.loginSwitch
+          }
         >
+
           <TouchableOpacity
             style={[
               styles.loginSwitchButton,
-              mode === "student" &&
+              mode ===
+                "student" &&
                 styles.loginSelected,
             ]}
             onPress={() =>
-              setMode("student")
+              setMode(
+                "student"
+              )
             }
           >
+
             <Text>
-              🎓 Student
+              ðŸŽ“ Student
             </Text>
+
           </TouchableOpacity>
 
 
           <TouchableOpacity
             style={[
               styles.loginSwitchButton,
-              mode === "teacher" &&
+              mode ===
+                "teacher" &&
                 styles.loginSelected,
             ]}
             onPress={() =>
-              setMode("teacher")
+              setMode(
+                "teacher"
+              )
             }
           >
+
             <Text>
-              👩‍🏫 Teacher
+              ðŸ‘©â€ðŸ« Teacher
             </Text>
+
           </TouchableOpacity>
+
         </View>
 
 
-        {mode === "student" ? (
+        {mode ===
+        "student" ? (
+
           <View
-            style={styles.loginCard}
+            style={
+              styles.loginCard
+            }
           >
+
             <Text
               style={
                 styles.cardTitle
@@ -1025,12 +2590,13 @@ function LoginScreen({
               Student Login
             </Text>
 
+
             <Text
               style={
                 styles.cardDescription
               }
             >
-              No password is required.
+              Enter your school email. No password is required.
             </Text>
 
 
@@ -1042,13 +2608,23 @@ function LoginScreen({
               School Email
             </Text>
 
+
             <TextInput
-              value={email}
-              onChangeText={setEmail}
+              value={
+                email
+              }
+              onChangeText={
+                setEmail
+              }
               placeholder="name@s2026.ssts.edu.sg"
               keyboardType="email-address"
               autoCapitalize="none"
-              style={styles.input}
+              autoCorrect={
+                false
+              }
+              style={
+                styles.input
+              }
             />
 
 
@@ -1062,6 +2638,7 @@ function LoginScreen({
                 )
               }
             >
+
               <Text
                 style={
                   styles.primaryText
@@ -1069,6 +2646,7 @@ function LoginScreen({
               >
                 Continue
               </Text>
+
             </TouchableOpacity>
 
 
@@ -1077,14 +2655,20 @@ function LoginScreen({
                 styles.helperText
               }
             >
-              Student emails must end
-              with @s202x.ssts.edu.sg
+              Example:
+              student@s2026.ssts.edu.sg
             </Text>
+
           </View>
+
         ) : (
+
           <View
-            style={styles.loginCard}
+            style={
+              styles.loginCard
+            }
           >
+
             <Text
               style={
                 styles.cardTitle
@@ -1102,11 +2686,21 @@ function LoginScreen({
               Username
             </Text>
 
+
             <TextInput
-              value={username}
-              onChangeText={setUsername}
+              value={
+                username
+              }
+              onChangeText={
+                setUsername
+              }
               autoCapitalize="none"
-              style={styles.input}
+              autoCorrect={
+                false
+              }
+              style={
+                styles.input
+              }
             />
 
 
@@ -1118,11 +2712,18 @@ function LoginScreen({
               Password
             </Text>
 
+
             <TextInput
-              value={password}
-              onChangeText={setPassword}
+              value={
+                password
+              }
+              onChangeText={
+                setPassword
+              }
               secureTextEntry
-              style={styles.input}
+              style={
+                styles.input
+              }
             />
 
 
@@ -1137,6 +2738,7 @@ function LoginScreen({
                 )
               }
             >
+
               <Text
                 style={
                   styles.primaryText
@@ -1144,10 +2746,24 @@ function LoginScreen({
               >
                 Login
               </Text>
+
             </TouchableOpacity>
+
+
+            <Text
+              style={
+                styles.helperText
+              }
+            >
+              Admin: admin / Admin123!
+            </Text>
+
           </View>
+
         )}
+
       </ScrollView>
+
     </SafeAreaView>
   );
 }
@@ -1163,7 +2779,9 @@ function HomePage({
   setPage,
 }) {
   const upcoming =
-    safeArray(homework)
+    safeArray(
+      homework
+    )
       .filter(
         (item) =>
           !item.completed
@@ -1178,7 +2796,10 @@ function HomePage({
             )
           )
       )
-      .slice(0, 5);
+      .slice(
+        0,
+        5
+      );
 
 
   return (
@@ -1187,14 +2808,20 @@ function HomePage({
         styles.page
       }
     >
-      <Text
-        style={styles.pageTitle}
-      >
-        Welcome 👋
-      </Text>
 
       <Text
-        style={styles.pageSubtitle}
+        style={
+          styles.pageTitle
+        }
+      >
+        Welcome ðŸ‘‹
+      </Text>
+
+
+      <Text
+        style={
+          styles.pageSubtitle
+        }
       >
         {user.role ===
         "student"
@@ -1204,10 +2831,13 @@ function HomePage({
 
 
       <View
-        style={styles.grid}
+        style={
+          styles.grid
+        }
       >
+
         <DashboardCard
-          icon="📝"
+          icon="ðŸ“"
           title="Homework"
           value={
             homework.length
@@ -1219,8 +2849,9 @@ function HomePage({
           }
         />
 
+
         <DashboardCard
-          icon="📅"
+          icon="ðŸ“…"
           title="Calendar"
           value="View"
           onPress={() =>
@@ -1233,21 +2864,26 @@ function HomePage({
 
         {user.role ===
           "student" && (
+
           <DashboardCard
-            icon="🤖"
+            icon="ðŸ¤–"
             title="Study AI"
             value="Ask"
             onPress={() =>
-              setPage("ai")
+              setPage(
+                "ai"
+              )
             }
           />
+
         )}
 
 
         {user.role !==
           "student" && (
+
           <DashboardCard
-            icon="🧠"
+            icon="ðŸ§ "
             title="AI Knowledge"
             value="Manage"
             onPress={() =>
@@ -1256,13 +2892,32 @@ function HomePage({
               )
             }
           />
+
         )}
 
 
         {user.role ===
           "admin" && (
+
           <DashboardCard
-            icon="🚨"
+            icon="ðŸ‘¥"
+            title="Accounts"
+            value="Manage"
+            onPress={() =>
+              setPage(
+                "accounts"
+              )
+            }
+          />
+
+        )}
+
+
+        {user.role ===
+          "admin" && (
+
+          <DashboardCard
+            icon="ðŸš¨"
             title="Reports"
             value="View"
             onPress={() =>
@@ -1271,12 +2926,16 @@ function HomePage({
               )
             }
           />
+
         )}
+
       </View>
 
 
       <Text
-        style={styles.sectionTitle}
+        style={
+          styles.sectionTitle
+        }
       >
         Upcoming Homework
       </Text>
@@ -1284,26 +2943,35 @@ function HomePage({
 
       {upcoming.length ===
       0 ? (
+
         <EmptyState
           text="No upcoming homework."
         />
+
       ) : (
+
         upcoming.map(
           (item) => (
             <HomeworkCard
-              key={item.id}
-              item={item}
+              key={
+                item.id
+              }
+              item={
+                item
+              }
             />
           )
         )
+
       )}
+
     </ScrollView>
   );
 }
 
 
 /* =========================================================
-   DASHBOARD
+   DASHBOARD CARD
    ========================================================= */
 
 function DashboardCard({
@@ -1317,39 +2985,55 @@ function DashboardCard({
       style={
         styles.dashboardCard
       }
-      onPress={onPress}
-      activeOpacity={0.75}
+      onPress={
+        onPress
+      }
+      activeOpacity={
+        0.8
+      }
     >
+
       <Text
         style={
           styles.dashboardIcon
         }
       >
-        {icon}
+        {
+          icon
+        }
       </Text>
+
 
       <Text
         style={
           styles.dashboardTitle
         }
       >
-        {title}
+        {
+          title
+        }
       </Text>
+
 
       <Text
         style={
           styles.dashboardValue
         }
       >
-        {String(value)}
+        {
+          String(
+            value
+          )
+        }
       </Text>
+
     </TouchableOpacity>
   );
 }
 
 
 /* =========================================================
-   HOMEWORK PAGE
+   HOMEWORK
    ========================================================= */
 
 function HomeworkPage({
@@ -1359,95 +3043,91 @@ function HomeworkPage({
   onDelete,
 }) {
   const [
-    modalVisible,
-    setModalVisible,
-  ] = useState(false);
-
-
-  function toggleComplete(id) {
-    if (
-      user.role !==
-      "student"
-    ) {
-      return;
-    }
-
-    onAddUpdate(
-      id
-    );
-  }
-
-
-  function onAddUpdate(id) {
-    // This is handled through the parent updater below.
-    // Kept separate so every button has a defined handler.
-    Alert.alert(
-      "Homework",
-      "Use the switch on the homework item to mark it complete."
-    );
-  }
+    visible,
+    setVisible,
+  ] = useState(
+    false
+  );
 
 
   return (
-    <View style={styles.flex}>
+    <View
+      style={
+        styles.flex
+      }
+    >
+
       <ScrollView
         contentContainerStyle={
           styles.page
         }
       >
+
         <View
           style={
             styles.rowBetween
           }
         >
+
           <View>
+
             <Text
               style={
                 styles.pageTitle
               }
             >
-              📝 Homework
+              ðŸ“ Homework
             </Text>
+
 
             <Text
               style={
                 styles.pageSubtitle
               }
             >
-              Homework added by
-              students and teachers.
+              Homework and assignments.
             </Text>
+
           </View>
 
 
-          <TouchableOpacity
-            style={
-              styles.smallButton
-            }
-            onPress={() =>
-              setModalVisible(
-                true
-              )
-            }
-          >
-            <Text
+          {user.role !==
+            "student" && (
+
+            <TouchableOpacity
               style={
-                styles.smallButtonText
+                styles.smallButton
+              }
+              onPress={() =>
+                setVisible(
+                  true
+                )
               }
             >
-              + Add
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={
+                  styles.smallButtonText
+                }
+              >
+                + Add
+              </Text>
+            </TouchableOpacity>
+
+          )}
+
         </View>
 
 
-        {safeArray(homework)
-          .length === 0 ? (
+        {homework.length ===
+        0 ? (
+
           <EmptyState
-            text="No homework has been added yet."
+            text="No homework has been added."
           />
+
         ) : (
-          safeArray(homework)
+
+          homework
             .slice()
             .sort(
               (a, b) =>
@@ -1462,18 +3142,12 @@ function HomeworkPage({
             .map(
               (item) => (
                 <HomeworkCard
-                  key={item.id}
-                  item={item}
-                  showComplete={
-                    user.role ===
-                    "student"
+                  key={
+                    item.id
                   }
-                  onComplete={() => {
-                    Alert.alert(
-                      "Complete homework",
-                      "Homework completion is saved on this device."
-                    );
-                  }}
+                  item={
+                    item
+                  }
                   canDelete={
                     user.role !==
                     "student"
@@ -1486,27 +3160,35 @@ function HomeworkPage({
                 />
               )
             )
+
         )}
+
       </ScrollView>
 
 
       <AddHomeworkModal
         visible={
-          modalVisible
+          visible
+        }
+        user={
+          user
         }
         onClose={() =>
-          setModalVisible(
+          setVisible(
             false
           )
         }
-        user={user}
         onAdd={(item) => {
-          onAdd(item);
-          setModalVisible(
+          onAdd(
+            item
+          );
+
+          setVisible(
             false
           );
         }}
       />
+
     </View>
   );
 }
@@ -1518,9 +3200,7 @@ function HomeworkPage({
 
 function HomeworkCard({
   item,
-  showComplete,
-  onComplete,
-  canDelete,
+  canDelete = false,
   onDelete,
 }) {
   return (
@@ -1529,47 +3209,27 @@ function HomeworkCard({
         styles.homeworkCard
       }
     >
-      <View
+
+      <Text
         style={
-          styles.homeworkTop
+          styles.homeworkTitle
         }
       >
-        <View
-          style={{ flex: 1 }}
-        >
-          <Text
-            style={
-              styles.homeworkTitle
-            }
-          >
-            {item.title}
-          </Text>
-
-          <Text
-            style={
-              styles.subjectBadge
-            }
-          >
-            {item.subject}
-          </Text>
-        </View>
+        {
+          item.title
+        }
+      </Text>
 
 
-        {showComplete && (
-          <TouchableOpacity
-            onPress={
-              onComplete
-            }
-            style={
-              styles.completeButton
-            }
-          >
-            <Text>
-              ✓
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <Text
+        style={
+          styles.subjectBadge
+        }
+      >
+        {
+          item.subject
+        }
+      </Text>
 
 
       <Text
@@ -1577,7 +3237,9 @@ function HomeworkCard({
           styles.homeworkDescription
         }
       >
-        {item.description}
+        {
+          item.description
+        }
       </Text>
 
 
@@ -1586,7 +3248,10 @@ function HomeworkCard({
           styles.dueDate
         }
       >
-        📅 Due: {item.dueDate}
+        ðŸ“… Due:{" "}
+        {
+          item.dueDate
+        }
       </Text>
 
 
@@ -1596,11 +3261,15 @@ function HomeworkCard({
         }
       >
         Added by:{" "}
-        {item.createdBy}
+        {
+          item.createdBy
+        }
       </Text>
 
 
-      {canDelete && (
+      {canDelete &&
+        onDelete && (
+
         <TouchableOpacity
           style={
             styles.deleteButton
@@ -1609,6 +3278,7 @@ function HomeworkCard({
             onDelete
           }
         >
+
           <Text
             style={
               styles.deleteText
@@ -1616,15 +3286,18 @@ function HomeworkCard({
           >
             Delete
           </Text>
+
         </TouchableOpacity>
+
       )}
+
     </View>
   );
 }
 
 
 /* =========================================================
-   ADD HOMEWORK
+   ADD HOMEWORK MODAL
    ========================================================= */
 
 function AddHomeworkModal({
@@ -1633,48 +3306,40 @@ function AddHomeworkModal({
   onAdd,
   user,
 }) {
-  const allowedSubjects =
-    safeArray(
-      user?.subjects
-    );
-
   const subjects =
-    user?.role === "student"
+    user.role ===
+    "admin"
       ? SUBJECTS
-      : allowedSubjects;
+      : safeArray(
+          user.subjects
+        );
 
 
-  const [title, setTitle] =
-    useState("");
-
-  const [description, setDescription] =
-    useState("");
-
-  const [dueDate, setDueDate] =
-    useState("");
-
-  const [subject, setSubject] =
-    useState(
-      subjects[0] ||
-        SUBJECTS[0]
-    );
+  const [
+    subject,
+    setSubject,
+  ] = useState(
+    subjects[0] ||
+      SUBJECTS[0]
+  );
 
 
-  useEffect(() => {
-    if (
-      subjects.length > 0 &&
-      !subjects.includes(
-        subject
-      )
-    ) {
-      setSubject(
-        subjects[0]
-      );
-    }
-  }, [
-    user,
-    subjects.length,
-  ]);
+  const [
+    title,
+    setTitle,
+  ] = useState("");
+
+
+  const [
+    description,
+    setDescription,
+  ] = useState("");
+
+
+  const [
+    dueDate,
+    setDueDate,
+  ] = useState("");
 
 
   function save() {
@@ -1687,14 +3352,14 @@ function AddHomeworkModal({
         "Missing information",
         "Please complete every field."
       );
+
       return;
     }
 
 
     onAdd({
       id:
-        Date.now().toString() +
-        Math.random(),
+        `${Date.now()}-${Math.random()}`,
 
       title:
         title.trim(),
@@ -1714,7 +3379,8 @@ function AddHomeworkModal({
       createdAt:
         new Date().toISOString(),
 
-      completed: false,
+      completed:
+        false,
     });
 
 
@@ -1726,22 +3392,30 @@ function AddHomeworkModal({
 
   return (
     <Modal
-      visible={visible}
+      visible={
+        visible
+      }
       transparent
       animationType="slide"
       onRequestClose={
         onClose
       }
     >
+
       <View
         style={
           styles.modalBackground
         }
       >
+
         <View
-          style={styles.modalCard}
+          style={
+            styles.modalCard
+          }
         >
+
           <ScrollView>
+
             <Text
               style={
                 styles.modalTitle
@@ -1759,13 +3433,18 @@ function AddHomeworkModal({
               Title
             </Text>
 
+
             <TextInput
-              value={title}
+              value={
+                title
+              }
               onChangeText={
                 setTitle
               }
               placeholder="Homework title"
-              style={styles.input}
+              style={
+                styles.input
+              }
             />
 
 
@@ -1777,18 +3456,21 @@ function AddHomeworkModal({
               Subject
             </Text>
 
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={
                 false
               }
             >
-              {safeArray(
-                subjects
-              ).map(
+
+              {subjects.map(
                 (item) => (
+
                   <TouchableOpacity
-                    key={item}
+                    key={
+                      item
+                    }
                     style={[
                       styles.subjectChoice,
                       subject ===
@@ -1801,6 +3483,7 @@ function AddHomeworkModal({
                       )
                     }
                   >
+
                     <Text
                       style={
                         subject ===
@@ -1809,11 +3492,16 @@ function AddHomeworkModal({
                           : styles.subjectChoiceText
                       }
                     >
-                      {item}
+                      {
+                        item
+                      }
                     </Text>
+
                   </TouchableOpacity>
+
                 )
               )}
+
             </ScrollView>
 
 
@@ -1824,6 +3512,7 @@ function AddHomeworkModal({
             >
               Description
             </Text>
+
 
             <TextInput
               value={
@@ -1849,13 +3538,18 @@ function AddHomeworkModal({
               Due Date
             </Text>
 
+
             <TextInput
-              value={dueDate}
+              value={
+                dueDate
+              }
               onChangeText={
                 setDueDate
               }
               placeholder="YYYY-MM-DD"
-              style={styles.input}
+              style={
+                styles.input
+              }
             />
 
 
@@ -1864,6 +3558,7 @@ function AddHomeworkModal({
                 styles.modalButtons
               }
             >
+
               <TouchableOpacity
                 style={
                   styles.cancelButton
@@ -1882,8 +3577,11 @@ function AddHomeworkModal({
                 style={
                   styles.primaryButton
                 }
-                onPress={save}
+                onPress={
+                  save
+                }
               >
+
                 <Text
                   style={
                     styles.primaryText
@@ -1891,11 +3589,17 @@ function AddHomeworkModal({
                 >
                   Add Homework
                 </Text>
+
               </TouchableOpacity>
+
             </View>
+
           </ScrollView>
+
         </View>
+
       </View>
+
     </Modal>
   );
 }
@@ -1928,11 +3632,13 @@ function CalendarPage({
   const [
     selectedDate,
     setSelectedDate,
-  ] = useState("");
+  ] = useState(
+    ""
+  );
 
 
   const selected =
-    safeArray(homework).filter(
+    homework.filter(
       (item) =>
         item.dueDate ===
         selectedDate
@@ -1945,13 +3651,15 @@ function CalendarPage({
         styles.page
       }
     >
+
       <Text
         style={
           styles.pageTitle
         }
       >
-        📅 Calendar
+        ðŸ“… Calendar
       </Text>
+
 
       <Text
         style={
@@ -1962,15 +3670,22 @@ function CalendarPage({
       </Text>
 
 
-      {dates.length === 0 ? (
+      {dates.length ===
+      0 ? (
+
         <EmptyState
           text="No deadlines yet."
         />
+
       ) : (
+
         dates.map(
           (date) => (
+
             <TouchableOpacity
-              key={date}
+              key={
+                date
+              }
               style={[
                 styles.calendarDate,
                 selectedDate ===
@@ -1983,23 +3698,20 @@ function CalendarPage({
                 )
               }
             >
+
               <Text
                 style={
                   styles.calendarDateText
                 }
               >
-                {date}
+                {
+                  date
+                }
               </Text>
 
-              <Text
-                style={
-                  styles.calendarCount
-                }
-              >
+              <Text>
                 {
-                  safeArray(
-                    homework
-                  ).filter(
+                  homework.filter(
                     (item) =>
                       item.dueDate ===
                       date
@@ -2007,286 +3719,321 @@ function CalendarPage({
                 }{" "}
                 homework item(s)
               </Text>
+
             </TouchableOpacity>
+
           )
         )
+
       )}
 
 
-      {selectedDate !==
-        "" && (
-        <View>
-          {selected.map(
-            (item) => (
-              <HomeworkCard
-                key={item.id}
-                item={item}
-              />
-            )
-          )}
-        </View>
-      )}
+      {selectedDate &&
+        selected.map(
+          (item) => (
+            <HomeworkCard
+              key={
+                item.id
+              }
+              item={
+                item
+              }
+            />
+          )
+        )}
+
     </ScrollView>
   );
 }
 
 
 /* =========================================================
-   AI
+   AI PAGE
    ========================================================= */
 
 function AIPage({
-  user,
   knowledge,
   onReport,
 }) {
-  const [subject, setSubject] =
-    useState(
-      SUBJECTS[0]
-    );
-
-  const [input, setInput] =
-    useState("");
-
-  const [messages, setMessages] =
-    useState([
-      {
-        id: "welcome",
-        sender: "ai",
-        text:
-          "Hi! I'm StudyPlanner AI. Ask me a schoolwork question.",
-      },
-    ]);
+  const [
+    subject,
+    setSubject,
+  ] = useState(
+    "Math"
+  );
 
 
-  function generateAnswer(
+  const [
+    input,
+    setInput,
+  ] = useState(
+    ""
+  );
+
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(
+    false
+  );
+
+
+  const [
+    messages,
+    setMessages,
+  ] = useState([
+    {
+      id:
+        "welcome",
+
+      sender:
+        "ai",
+
+      text:
+        "Hi! Ask me your homework question. I will read the question and explain it as clearly as possible.",
+    },
+  ]);
+
+
+  async function askRealAI(
     question
   ) {
-    const lower =
-      question.toLowerCase();
+    if (!AI_ENDPOINT) {
+      return builtInAI(
+        subject,
+        question,
+        knowledge
+      );
+    }
 
 
-    const relevant =
+    const teacherKnowledge =
       safeArray(
         knowledge
-      ).filter(
-        (item) => {
-          if (
-            item.subject !==
+      )
+        .filter(
+          (item) =>
+            item.subject ===
             subject
-          ) {
-            return false;
-          }
+        )
+        .slice(
+          0,
+          10
+        );
 
 
-          const combined =
-            `${item.title} ${item.content}`
-              .toLowerCase();
+    const response =
+      await fetch(
+        AI_ENDPOINT,
+        {
+          method:
+            "POST",
 
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-          const words =
-            lower.split(
-              /\s+/
-            );
-
-
-          return words.some(
-            (word) => {
-              const clean =
-                word.replace(
-                  /[^a-z0-9]/g,
-                  ""
-                );
-
-              return (
-                clean.length >= 4 &&
-                combined.includes(
-                  clean
-                )
-              );
-            }
-          );
+          body:
+            JSON.stringify({
+              question,
+              subject,
+              teacherKnowledge,
+            }),
         }
       );
 
 
-    if (
-      relevant.length > 0
-    ) {
-      return (
-        `Teacher knowledge for ${subject}:\n\n` +
-        relevant
-          .slice(0, 5)
-          .map(
-            (item) =>
-              `${item.title}\n${item.content}`
-          )
-          .join(
-            "\n\n"
-          )
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          "AI request failed."
       );
     }
 
 
-    const fallback = {
-      Math:
-        "Break the problem into steps, identify what you know and what you need to find, then choose the appropriate method.",
-
-      Science:
-        "Identify the scientific concept first, then explain the process using correct scientific vocabulary.",
-
-      English:
-        "Identify what the question asks, plan your answer and support your ideas with relevant evidence or examples.",
-
-      Chinese:
-        "Identify the important words in the question and answer using clear, complete sentences.",
-
-      HCL:
-        "Identify the key information in the question and construct a clear answer using appropriate language.",
-
-      History:
-        "Explain the event, provide evidence and explain why the event was significant.",
-
-      Geography:
-        "Identify the geographical process, explain the causes and effects, and use relevant examples.",
-
-      Malay:
-        "Identify the key words in the question and construct a clear, complete response.",
-
-      "Physical Education":
-        "Explain the relevant movement, fitness or health concept and give a suitable example.",
-
-      "Innovation & Entrepreneurship":
-        "Identify the problem, explain the proposed solution and consider the users, value and feasibility.",
-
-      "D&T":
-        "Identify the design problem, consider constraints and explain how the proposed design solves the problem.",
-
-      ICT:
-        "Break the ICT problem into smaller steps and identify the appropriate technology or process.",
-    };
-
-
     return (
-      fallback[
-        subject
-      ] ||
-      `I don't have a teacher note matching this ${subject} question yet.`
+      data.answer ||
+      builtInAI(
+        subject,
+        question,
+        knowledge
+      )
     );
   }
 
 
-  function sendMessage() {
+  async function sendMessage() {
     const question =
       input.trim();
 
 
-    if (!question) {
+    if (!question ||
+        loading) {
       return;
     }
 
-
-    /* -----------------------------------------
-       MODERATION
-       ----------------------------------------- */
 
     if (
       isInappropriate(
         question
       )
     ) {
-      // Do NOT add the inappropriate
-      // message to the chat.
-
-      onReport(question);
+      onReport(
+        question
+      );
 
       setInput("");
 
+
       Alert.alert(
         "Message removed",
-        "That message cannot be used with StudyPlanner AI. An administrator has been notified."
+        "This message was blocked and reported to the administrator."
       );
 
       return;
     }
 
 
-    const studentMessage = {
-      id:
-        Date.now().toString(),
-      sender: "student",
-      text: question,
-    };
-
-
-    const aiMessage = {
-      id:
-        Date.now().toString() +
-        "-ai",
-      sender: "ai",
-      text:
-        generateAnswer(
-          question
-        ),
-    };
-
-
     setMessages(
       (old) => [
-        ...safeArray(old),
-        studentMessage,
-        aiMessage,
+        ...old,
+
+        {
+          id:
+            `${Date.now()}-student`,
+
+          sender:
+            "student",
+
+          text:
+            question,
+        },
       ]
     );
 
+
     setInput("");
+    setLoading(
+      true
+    );
+
+
+    try {
+      const answer =
+        await askRealAI(
+          question
+        );
+
+
+      setMessages(
+        (old) => [
+          ...old,
+
+          {
+            id:
+              `${Date.now()}-ai`,
+
+            sender:
+              "ai",
+
+            text:
+              answer,
+          },
+        ]
+      );
+
+    } catch (
+      error
+    ) {
+
+      setMessages(
+        (old) => [
+          ...old,
+
+          {
+            id:
+              `${Date.now()}-error`,
+
+            sender:
+              "ai",
+
+            text:
+              "I could not connect to the online AI. I can still use the built-in tutor â€” try asking a more specific question.",
+          },
+        ]
+      );
+
+    } finally {
+      setLoading(
+        false
+      );
+    }
   }
 
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={
+        styles.flex
+      }
       behavior={
-        Platform.OS === "ios"
+        Platform.OS ===
+        "ios"
           ? "padding"
           : undefined
       }
     >
+
       <View
         style={
           styles.aiHeader
         }
       >
+
         <Text
           style={
             styles.pageTitle
           }
         >
-          🤖 Study AI
+          ðŸ¤– Study AI
         </Text>
+
 
         <Text
           style={
             styles.pageSubtitle
           }
         >
-          Teacher-powered study help
+          {AI_ENDPOINT
+            ? "Online AI enabled"
+            : "Built-in Snack AI"}
         </Text>
+
       </View>
 
 
       <ScrollView
-        style={styles.chat}
+        style={
+          styles.chat
+        }
         contentContainerStyle={
           styles.chatContent
         }
       >
-        {safeArray(
-          messages
-        ).map(
+
+        {messages.map(
           (message) => (
+
             <View
-              key={message.id}
+              key={
+                message.id
+              }
               style={[
                 styles.message,
                 message.sender ===
@@ -2295,6 +4042,7 @@ function AIPage({
                   : styles.aiMessage,
               ]}
             >
+
               <Text
                 style={
                   styles.messageSender
@@ -2306,16 +4054,52 @@ function AIPage({
                   : "StudyPlanner AI"}
               </Text>
 
+
               <Text
                 style={
                   styles.messageText
                 }
               >
-                {message.text}
+                {
+                  message.text
+                }
               </Text>
+
             </View>
+
           )
         )}
+
+
+        {loading && (
+
+          <View
+            style={
+              styles.aiMessage
+            }
+          >
+
+            <Text
+              style={
+                styles.messageSender
+              }
+            >
+              StudyPlanner AI
+            </Text>
+
+
+            <Text
+              style={
+                styles.messageText
+              }
+            >
+              Reading your question...
+            </Text>
+
+          </View>
+
+        )}
+
       </ScrollView>
 
 
@@ -2324,6 +4108,7 @@ function AIPage({
           styles.subjectBar
         }
       >
+
         <Text
           style={
             styles.subjectLabel
@@ -2332,16 +4117,21 @@ function AIPage({
           Subject
         </Text>
 
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={
             false
           }
         >
+
           {SUBJECTS.map(
             (item) => (
+
               <TouchableOpacity
-                key={item}
+                key={
+                  item
+                }
                 style={[
                   styles.aiSubject,
                   subject ===
@@ -2354,6 +4144,7 @@ function AIPage({
                   )
                 }
               >
+
                 <Text
                   style={
                     subject ===
@@ -2362,12 +4153,18 @@ function AIPage({
                       : styles.aiSubjectText
                   }
                 >
-                  {item}
+                  {
+                    item
+                  }
                 </Text>
+
               </TouchableOpacity>
+
             )
           )}
+
         </ScrollView>
+
       </View>
 
 
@@ -2376,33 +4173,51 @@ function AIPage({
           styles.chatInputRow
         }
       >
+
         <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Ask a homework question..."
+          value={
+            input
+          }
+          onChangeText={
+            setInput
+          }
+          placeholder="Ask your full homework question..."
           multiline
+          editable={
+            !loading
+          }
           style={
             styles.chatInput
           }
         />
 
+
         <TouchableOpacity
-          style={
-            styles.sendButton
-          }
+          style={[
+            styles.sendButton,
+            loading &&
+              styles.disabledButton,
+          ]}
           onPress={
             sendMessage
           }
+          disabled={
+            loading
+          }
         >
+
           <Text
             style={
               styles.sendText
             }
           >
-            ➤
+            âž¤
           </Text>
+
         </TouchableOpacity>
+
       </View>
+
     </KeyboardAvoidingView>
   );
 }
@@ -2418,19 +4233,18 @@ function KnowledgePage({
   setKnowledge,
 }) {
   const [
-    modalVisible,
-    setModalVisible,
-  ] = useState(false);
+    visible,
+    setVisible,
+  ] = useState(
+    false
+  );
 
 
-  const visible =
-    user.role === "admin"
-      ? safeArray(
-          knowledge
-        )
-      : safeArray(
-          knowledge
-        ).filter(
+  const visibleKnowledge =
+    user.role ===
+    "admin"
+      ? knowledge
+      : knowledge.filter(
           (item) =>
             safeArray(
               user.subjects
@@ -2445,21 +4259,26 @@ function KnowledgePage({
   ) {
     Alert.alert(
       "Delete knowledge?",
-      "This will remove it from the AI knowledge base.",
+      "Remove this knowledge entry?",
       [
         {
-          text: "Cancel",
-          style: "cancel",
+          text:
+            "Cancel",
+          style:
+            "cancel",
         },
+
         {
-          text: "Delete",
-          style: "destructive",
+          text:
+            "Delete",
+
+          style:
+            "destructive",
+
           onPress: () =>
             setKnowledge(
               (old) =>
-                safeArray(
-                  old
-                ).filter(
+                old.filter(
                   (item) =>
                     item.id !==
                     id
@@ -2472,38 +4291,47 @@ function KnowledgePage({
 
 
   return (
-    <View style={styles.flex}>
+    <View
+      style={
+        styles.flex
+      }
+    >
+
       <ScrollView
         contentContainerStyle={
           styles.page
         }
       >
+
         <View
           style={
             styles.rowBetween
           }
         >
-          <View>
+
+          <View
+            style={{
+              flex: 1,
+            }}
+          >
+
             <Text
               style={
                 styles.pageTitle
               }
             >
-              🧠 AI Knowledge
+              ðŸ§  AI Knowledge
             </Text>
+
 
             <Text
               style={
                 styles.pageSubtitle
               }
             >
-              {user.role ===
-              "admin"
-                ? "Manage all subjects."
-                : `Only your subject: ${safeArray(
-                    user.subjects
-                  ).join(", ")}`}
+              Teacher knowledge is optional. The built-in AI works without it.
             </Text>
+
           </View>
 
 
@@ -2512,11 +4340,12 @@ function KnowledgePage({
               styles.smallButton
             }
             onPress={() =>
-              setModalVisible(
+              setVisible(
                 true
               )
             }
           >
+
             <Text
               style={
                 styles.smallButtonText
@@ -2524,47 +4353,65 @@ function KnowledgePage({
             >
               + Add
             </Text>
+
           </TouchableOpacity>
+
         </View>
 
 
-        {visible.length ===
+        {visibleKnowledge.length ===
         0 ? (
+
           <EmptyState
-            text="No knowledge added yet."
+            text="No knowledge."
           />
+
         ) : (
-          visible.map(
+
+          visibleKnowledge.map(
             (item) => (
+
               <View
-                key={item.id}
+                key={
+                  item.id
+                }
                 style={
                   styles.knowledgeCard
                 }
               >
+
                 <Text
                   style={
                     styles.knowledgeSubject
                   }
                 >
-                  {item.subject}
+                  {
+                    item.subject
+                  }
                 </Text>
+
 
                 <Text
                   style={
                     styles.knowledgeTitle
                   }
                 >
-                  {item.title}
+                  {
+                    item.title
+                  }
                 </Text>
+
 
                 <Text
                   style={
                     styles.knowledgeContent
                   }
                 >
-                  {item.content}
+                  {
+                    item.content
+                  }
                 </Text>
+
 
                 <Text
                   style={
@@ -2572,77 +4419,94 @@ function KnowledgePage({
                   }
                 >
                   Added by{" "}
-                  {item.addedBy}
+                  {
+                    item.addedBy
+                  }
                 </Text>
 
 
-                <TouchableOpacity
-                  style={
-                    styles.deleteButton
-                  }
-                  onPress={() =>
-                    deleteKnowledge(
-                      item.id
-                    )
-                  }
-                >
-                  <Text
+                {item.addedBy !==
+                  "Built-in" && (
+
+                  <TouchableOpacity
                     style={
-                      styles.deleteText
+                      styles.deleteButton
+                    }
+                    onPress={() =>
+                      deleteKnowledge(
+                        item.id
+                      )
                     }
                   >
-                    Delete
-                  </Text>
-                </TouchableOpacity>
+
+                    <Text
+                      style={
+                        styles.deleteText
+                      }
+                    >
+                      Delete
+                    </Text>
+
+                  </TouchableOpacity>
+
+                )}
+
               </View>
+
             )
           )
+
         )}
+
       </ScrollView>
 
 
       <AddKnowledgeModal
         visible={
-          modalVisible
+          visible
+        }
+        user={
+          user
         }
         onClose={() =>
-          setModalVisible(
+          setVisible(
             false
           )
         }
-        user={user}
         onAdd={(item) => {
+
           setKnowledge(
             (old) => [
-              ...safeArray(
-                old
-              ),
+              ...old,
               item,
             ]
           );
 
-          setModalVisible(
+          setVisible(
             false
           );
+
         }}
       />
+
     </View>
   );
 }
 
 
 /* =========================================================
-   ADD KNOWLEDGE
+   ADD KNOWLEDGE MODAL
    ========================================================= */
 
 function AddKnowledgeModal({
   visible,
+  user,
   onClose,
   onAdd,
-  user,
 }) {
-  const availableSubjects =
-    user.role === "admin"
+  const subjects =
+    user.role ===
+    "admin"
       ? SUBJECTS
       : safeArray(
           user.subjects
@@ -2653,33 +4517,24 @@ function AddKnowledgeModal({
     subject,
     setSubject,
   ] = useState(
-    availableSubjects[0] ||
-      SUBJECTS[0]
+    subjects[0]
   );
 
-  const [title, setTitle] =
-    useState("");
 
-  const [content, setContent] =
-    useState("");
+  const [
+    title,
+    setTitle,
+  ] = useState(
+    ""
+  );
 
 
-  useEffect(() => {
-    if (
-      availableSubjects.length >
-        0 &&
-      !availableSubjects.includes(
-        subject
-      )
-    ) {
-      setSubject(
-        availableSubjects[0]
-      );
-    }
-  }, [
-    user,
-    availableSubjects.length,
-  ]);
+  const [
+    content,
+    setContent,
+  ] = useState(
+    ""
+  );
 
 
   function save() {
@@ -2689,23 +4544,7 @@ function AddKnowledgeModal({
     ) {
       Alert.alert(
         "Missing information",
-        "Enter a topic and teacher notes."
-      );
-
-      return;
-    }
-
-
-    if (
-      user.role ===
-        "teacher" &&
-      !safeArray(
-        user.subjects
-      ).includes(subject)
-    ) {
-      Alert.alert(
-        "Not allowed",
-        "You can only add AI knowledge for your own subject."
+        "Enter a topic and knowledge."
       );
 
       return;
@@ -2714,8 +4553,7 @@ function AddKnowledgeModal({
 
     onAdd({
       id:
-        Date.now().toString() +
-        Math.random(),
+        `${Date.now()}-${Math.random()}`,
 
       subject,
 
@@ -2740,39 +4578,36 @@ function AddKnowledgeModal({
 
   return (
     <Modal
-      visible={visible}
+      visible={
+        visible
+      }
       transparent
       animationType="slide"
       onRequestClose={
         onClose
       }
     >
+
       <View
         style={
           styles.modalBackground
         }
       >
+
         <View
-          style={styles.modalCard}
+          style={
+            styles.modalCard
+          }
         >
+
           <ScrollView>
+
             <Text
               style={
                 styles.modalTitle
               }
             >
               Add AI Knowledge
-            </Text>
-
-
-            <Text
-              style={
-                styles.modalDescription
-              }
-            >
-              Teachers can only add
-              knowledge for their own
-              subject.
             </Text>
 
 
@@ -2791,12 +4626,14 @@ function AddKnowledgeModal({
                 false
               }
             >
-              {safeArray(
-                availableSubjects
-              ).map(
+
+              {subjects.map(
                 (item) => (
+
                   <TouchableOpacity
-                    key={item}
+                    key={
+                      item
+                    }
                     style={[
                       styles.subjectChoice,
                       subject ===
@@ -2809,6 +4646,7 @@ function AddKnowledgeModal({
                       )
                     }
                   >
+
                     <Text
                       style={
                         subject ===
@@ -2817,11 +4655,16 @@ function AddKnowledgeModal({
                           : styles.subjectChoiceText
                       }
                     >
-                      {item}
+                      {
+                        item
+                      }
                     </Text>
+
                   </TouchableOpacity>
+
                 )
               )}
+
             </ScrollView>
 
 
@@ -2833,13 +4676,18 @@ function AddKnowledgeModal({
               Topic
             </Text>
 
+
             <TextInput
-              value={title}
+              value={
+                title
+              }
               onChangeText={
                 setTitle
               }
-              placeholder="Example: Photosynthesis"
-              style={styles.input}
+              placeholder="Topic"
+              style={
+                styles.input
+              }
             />
 
 
@@ -2848,19 +4696,22 @@ function AddKnowledgeModal({
                 styles.inputLabel
               }
             >
-              Teacher Notes
+              Knowledge
             </Text>
 
+
             <TextInput
-              value={content}
+              value={
+                content
+              }
               onChangeText={
                 setContent
               }
-              placeholder="Enter explanations, examples and tips..."
+              placeholder="Enter useful information for the AI..."
               multiline
               style={[
                 styles.input,
-                styles.largeTextArea,
+                styles.textArea,
               ]}
             />
 
@@ -2870,6 +4721,7 @@ function AddKnowledgeModal({
                 styles.modalButtons
               }
             >
+
               <TouchableOpacity
                 style={
                   styles.cancelButton
@@ -2888,57 +4740,63 @@ function AddKnowledgeModal({
                 style={
                   styles.primaryButton
                 }
-                onPress={save}
+                onPress={
+                  save
+                }
               >
+
                 <Text
                   style={
                     styles.primaryText
                   }
                 >
-                  Save Knowledge
+                  Save
                 </Text>
+
               </TouchableOpacity>
+
             </View>
+
           </ScrollView>
+
         </View>
+
       </View>
+
     </Modal>
   );
 }
 
 
 /* =========================================================
-   ADMIN REPORTS
+   ACCOUNTS PAGE
    ========================================================= */
 
-function ReportsPage({
-  reports,
-  setReports,
+function AccountsPage({
+  accounts,
+  bannedAccounts,
+  onToggleBan,
 }) {
-  function markRead(id) {
-    setReports((old) =>
-      safeArray(old).map(
-        (report) =>
-          report.id === id
-            ? {
-                ...report,
-                status:
-                  "read",
-              }
-            : report
-      )
+  const safeAccounts =
+    safeArray(
+      accounts
     );
-  }
 
 
-  function deleteReport(id) {
-    setReports((old) =>
-      safeArray(old).filter(
-        (report) =>
-          report.id !== id
-      )
-    );
-  }
+  const students =
+    safeAccounts.filter(
+      (item) =>
+        item.role ===
+        "student"
+    ).length;
+
+
+  const teachers =
+    safeAccounts.filter(
+      (item) =>
+        item.role ===
+        "teacher"
+    ).length;
 
 
   return (
@@ -2947,139 +4805,483 @@ function ReportsPage({
         styles.page
       }
     >
+
       <Text
         style={
           styles.pageTitle
         }
       >
-        🚨 Admin Reports
+        ðŸ‘¥ Accounts
       </Text>
+
 
       <Text
         style={
           styles.pageSubtitle
         }
       >
-        Inappropriate AI messages
-        reported by StudyPlanner.
+        View all accounts stored by this installation.
       </Text>
 
 
-      {safeArray(reports)
-        .length === 0 ? (
-        <EmptyState
-          text="No moderation reports."
-        />
-      ) : (
-        safeArray(
-          reports
-        ).map(
-          (report) => (
-            <View
-              key={report.id}
-              style={
-                styles.reportCard
-              }
-            >
-              <Text
-                style={
-                  styles.reportTitle
-                }
-              >
-                {report.status ===
-                "unread"
-                  ? "🔴 New Report"
-                  : "⚪ Reviewed"}
-              </Text>
+      <View
+        style={
+          styles.accountSummary
+        }
+      >
 
-              <Text
-                style={
-                  styles.reportStudent
-                }
-              >
-                Student:{" "}
-                {report.student}
-              </Text>
+        <View
+          style={
+            styles.summaryBox
+          }
+        >
+          <Text
+            style={
+              styles.summaryNumber
+            }
+          >
+            {
+              safeAccounts.length
+            }
+          </Text>
 
-              <Text
-                style={
-                  styles.reportMessage
-                }
-              >
-                The message was
-                automatically blocked.
-              </Text>
-
-              <Text
-                style={
-                  styles.createdBy
-                }
-              >
-                Time:{" "}
-                {new Date(
-                  report.date
-                ).toLocaleString()}
-              </Text>
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            Total
+          </Text>
+        </View>
 
 
+        <View
+          style={
+            styles.summaryBox
+          }
+        >
+          <Text
+            style={
+              styles.summaryNumber
+            }
+          >
+            {
+              students
+            }
+          </Text>
+
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            Students
+          </Text>
+        </View>
+
+
+        <View
+          style={
+            styles.summaryBox
+          }
+        >
+          <Text
+            style={
+              styles.summaryNumber
+            }
+          >
+            {
+              teachers
+            }
+          </Text>
+
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            Teachers
+          </Text>
+        </View>
+
+
+        <View
+          style={
+            styles.summaryBox
+          }
+        >
+          <Text
+            style={[
+              styles.summaryNumber,
+              styles.summaryDanger,
+            ]}
+          >
+            {
+              bannedAccounts.length
+            }
+          </Text>
+
+          <Text
+            style={
+              styles.summaryLabel
+            }
+          >
+            Banned
+          </Text>
+        </View>
+
+      </View>
+
+
+      <View
+        style={
+          styles.accountManageCard
+        }
+      >
+
+        <View
+          style={{
+            flex: 1,
+          }}
+        >
+
+          <Text
+            style={
+              styles.accountManageName
+            }
+          >
+            ðŸ‘‘ Administrator
+          </Text>
+
+
+          <Text
+            style={
+              styles.accountText
+            }
+          >
+            Username: admin
+          </Text>
+
+
+          <Text
+            style={
+              styles.protectedText
+            }
+          >
+            PROTECTED
+          </Text>
+
+        </View>
+
+      </View>
+
+
+      {safeAccounts
+        .filter(
+          (account) =>
+            account.id !==
+            "admin:admin"
+        )
+        .map(
+          (account) => {
+
+            const key =
+              String(
+                account.key ||
+                  ""
+              )
+                .toLowerCase()
+                .trim();
+
+
+            const banned =
+              safeArray(
+                bannedAccounts
+              ).includes(
+                key
+              );
+
+
+            return (
               <View
+                key={
+                  account.id
+                }
                 style={
-                  styles.reportButtons
+                  styles.accountManageCard
                 }
               >
-                {report.status ===
-                  "unread" && (
-                  <TouchableOpacity
+
+                <View
+                  style={{
+                    flex: 1,
+                  }}
+                >
+
+                  <Text
                     style={
-                      styles.smallButton
-                    }
-                    onPress={() =>
-                      markRead(
-                        report.id
-                      )
+                      styles.accountManageName
                     }
                   >
+                    {
+                      account.name ||
+                      account.email ||
+                      account.username
+                    }
+                  </Text>
+
+
+                  <Text
+                    style={
+                      styles.accountText
+                    }
+                  >
+                    Role:{" "}
+                    {
+                      account.role
+                    }
+                  </Text>
+
+
+                  {account.email && (
                     <Text
                       style={
-                        styles.smallButtonText
+                        styles.accountText
                       }
                     >
-                      Mark Read
+                      Email:{" "}
+                      {
+                        account.email
+                      }
                     </Text>
-                  </TouchableOpacity>
-                )}
+                  )}
+
+
+                  {account.username && (
+                    <Text
+                      style={
+                        styles.accountText
+                      }
+                    >
+                      Username:{" "}
+                      {
+                        account.username
+                      }
+                    </Text>
+                  )}
+
+
+                  {account.role === "teacher" && (
+                    <Text style={styles.accountText}>
+                      Password: {account.passwordUpdatedAt ? `Updated ${new Date(account.passwordUpdatedAt).toLocaleDateString()}` : "Default password"}
+                    </Text>
+                  )}
+
+                  <Text
+                    style={[
+                      styles.accountStatus,
+                      banned &&
+                        styles.accountBanned,
+                    ]}
+                  >
+                    {banned
+                      ? "BANNED"
+                      : "ACTIVE"}
+                  </Text>
+
+                </View>
 
 
                 <TouchableOpacity
                   style={
-                    styles.deleteButton
+                    banned
+                      ? styles.unbanButton
+                      : styles.banButton
                   }
                   onPress={() =>
-                    deleteReport(
-                      report.id
+                    onToggleBan(
+                      account
                     )
                   }
                 >
+
                   <Text
                     style={
-                      styles.deleteText
+                      styles.primaryText
                     }
                   >
-                    Delete
+                    {banned
+                      ? "Unban"
+                      : "Ban"}
                   </Text>
+
                 </TouchableOpacity>
+
               </View>
-            </View>
-          )
-        )
-      )}
+            );
+          }
+        )}
+
     </ScrollView>
   );
 }
 
 
 /* =========================================================
-   SETTINGS
+   REPORTS PAGE
+   ========================================================= */
+
+function ReportsPage({
+  reports,
+  setReports,
+}) {
+  return (
+    <ScrollView
+      contentContainerStyle={
+        styles.page
+      }
+    >
+
+      <View
+        style={
+          styles.rowBetween
+        }
+      >
+
+        <View
+          style={{
+            flex: 1,
+          }}
+        >
+
+          <Text
+            style={
+              styles.pageTitle
+            }
+          >
+            ðŸš¨ AI Reports
+          </Text>
+
+
+          <Text
+            style={
+              styles.pageSubtitle
+            }
+          >
+            Messages blocked by moderation.
+          </Text>
+
+        </View>
+
+
+        {reports.length >
+          0 && (
+
+          <TouchableOpacity
+            style={
+              styles.smallButton
+            }
+            onPress={() =>
+              setReports(
+                []
+              )
+            }
+          >
+
+            <Text
+              style={
+                styles.smallButtonText
+              }
+            >
+              Clear
+            </Text>
+
+          </TouchableOpacity>
+
+        )}
+
+      </View>
+
+
+      {reports.length ===
+      0 ? (
+
+        <EmptyState
+          text="No reports."
+        />
+
+      ) : (
+
+        reports.map(
+          (report) => (
+
+            <View
+              key={
+                report.id
+              }
+              style={
+                styles.reportCard
+              }
+            >
+
+              <Text
+                style={
+                  styles.reportType
+                }
+              >
+                {
+                  report.type
+                }
+              </Text>
+
+
+              <Text
+                style={
+                  styles.accountText
+                }
+              >
+                Student:{" "}
+                {
+                  report.student
+                }
+              </Text>
+
+
+              <Text
+                style={
+                  styles.reportMessage
+                }
+              >
+                {
+                  report.message
+                }
+              </Text>
+
+
+              <Text
+                style={
+                  styles.createdBy
+                }
+              >
+                {
+                  report.date
+                }
+              </Text>
+
+            </View>
+
+          )
+        )
+
+      )}
+
+    </ScrollView>
+  );
+}
+
+
+/* =========================================================
+   SETTINGS PAGE
    ========================================================= */
 
 function SettingsPage({
@@ -3088,19 +5290,59 @@ function SettingsPage({
   notifications,
   setDarkMode,
   setNotifications,
+  onChangePassword,
 }) {
+  const [currentPassword, setCurrentPassword] = useState(
+    ""
+  );
+  const [newPassword, setNewPassword] = useState(
+    ""
+  );
+  const [confirmPassword, setConfirmPassword] = useState(
+    ""
+  );
+
+  function saveNewPassword() {
+    if (user.role !== "teacher") return;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert("Missing details", "Fill in all password fields.");
+      return;
+    }
+    if (currentPassword !== user.password) {
+      Alert.alert("Password not changed", "Your current password is incorrect.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      Alert.alert("Password too short", "Use at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Passwords do not match", "Enter the same new password twice.");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      Alert.alert("Choose a new password", "Your new password must be different.");
+      return;
+    }
+    onChangePassword(user, currentPassword, newPassword);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  }
+
   return (
     <ScrollView
       contentContainerStyle={
         styles.page
       }
     >
+
       <Text
         style={
           styles.pageTitle
         }
       >
-        ⚙️ Settings
+        âš™ï¸ Settings
       </Text>
 
 
@@ -3109,14 +5351,19 @@ function SettingsPage({
           styles.settingsCard
         }
       >
+
         <View
           style={
             styles.settingRow
           }
         >
+
           <View
-            style={{ flex: 1 }}
+            style={{
+              flex: 1,
+            }}
           >
+
             <Text
               style={
                 styles.settingTitle
@@ -3125,21 +5372,27 @@ function SettingsPage({
               Dark Mode
             </Text>
 
+
             <Text
               style={
                 styles.settingDescription
               }
             >
-              Use a darker appearance.
+              Change the app appearance.
             </Text>
+
           </View>
 
+
           <Switch
-            value={darkMode}
+            value={
+              darkMode
+            }
             onValueChange={
               setDarkMode
             }
           />
+
         </View>
 
 
@@ -3155,9 +5408,13 @@ function SettingsPage({
             styles.settingRow
           }
         >
+
           <View
-            style={{ flex: 1 }}
+            style={{
+              flex: 1,
+            }}
           >
+
             <Text
               style={
                 styles.settingTitle
@@ -3166,14 +5423,17 @@ function SettingsPage({
               Notifications
             </Text>
 
+
             <Text
               style={
                 styles.settingDescription
               }
             >
-              Homework reminders.
+              Homework reminder preference.
             </Text>
+
           </View>
+
 
           <Switch
             value={
@@ -3183,15 +5443,55 @@ function SettingsPage({
               setNotifications
             }
           />
+
         </View>
+
       </View>
 
+
+      {user.role === "teacher" && (
+        <View style={styles.settingsCard}>
+          <Text style={styles.cardTitle}>Change Password</Text>
+          <Text style={styles.settingDescription}>You can change your password here. Your email / username cannot be changed. The admin account list will show that your password was updated.</Text>
+          <Text style={styles.accountText}>Current password</Text>
+          <TextInput
+            style={styles.input}
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="Enter current password"
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          <Text style={styles.accountText}>New password (at least 8 characters)</Text>
+          <TextInput
+            style={styles.input}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="Enter new password"
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          <Text style={styles.accountText}>Confirm new password</Text>
+          <TextInput
+            style={styles.input}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Re-enter new password"
+            secureTextEntry
+            autoCapitalize="none"
+          />
+          <TouchableOpacity style={styles.primaryButton} onPress={saveNewPassword}>
+            <Text style={styles.primaryButtonText}>Save New Password</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View
         style={
           styles.accountCard
         }
       >
+
         <Text
           style={
             styles.cardTitle
@@ -3200,47 +5500,42 @@ function SettingsPage({
           Account
         </Text>
 
+
         <Text
           style={
             styles.accountText
           }
         >
-          Type:{" "}
-          {user.role}
+          Name:{" "}
+          {
+            user.name
+          }
         </Text>
 
-        {user.email && (
-          <Text
-            style={
-              styles.accountText
-            }
-          >
-            Email:{" "}
-            {user.email}
-          </Text>
-        )}
 
-        {user.username && (
-          <Text
-            style={
-              styles.accountText
-            }
-          >
-            Username:{" "}
-            {user.username}
-          </Text>
-        )}
+        <Text
+          style={
+            styles.accountText
+          }
+        >
+          Role:{" "}
+          {
+            user.role
+          }
+        </Text>
+
+
+        <Text
+          style={
+            styles.accountText
+          }
+        >
+          {user.email ||
+            user.username}
+        </Text>
+
       </View>
 
-
-      <Text
-        style={
-          styles.versionText
-        }
-      >
-        StudyPlanner V5 • iOS •
-        Android • Web
-      </Text>
     </ScrollView>
   );
 }
@@ -3258,151 +5553,173 @@ function NavigationBar({
 }) {
   const items = [
     {
-      id: "home",
-      icon: "🏠",
-      label: "Home",
+      id:
+        "home",
+      icon:
+        "ðŸ ",
+      label:
+        "Home",
     },
 
     {
-      id: "homework",
-      icon: "📝",
-      label: "Homework",
+      id:
+        "homework",
+      icon:
+        "ðŸ“",
+      label:
+        "Homework",
     },
 
     {
-      id: "calendar",
-      icon: "📅",
-      label: "Calendar",
-    },
-
-    {
-      id: "settings",
-      icon: "⚙️",
-      label: "Settings",
+      id:
+        "calendar",
+      icon:
+        "ðŸ“…",
+      label:
+        "Calendar",
     },
   ];
 
-
-  /* Students get AI.
-     Teachers do NOT get AI. */
 
   if (
     user.role ===
     "student"
   ) {
-    items.splice(
-      3,
-      0,
-      {
-        id: "ai",
-        icon: "🤖",
-        label: "AI",
-      }
-    );
+    items.push({
+      id:
+        "ai",
+      icon:
+        "ðŸ¤–",
+      label:
+        "AI",
+    });
   }
 
-
-  /* Teachers/admin get Knowledge */
 
   if (
-    user.role ===
-      "teacher" ||
-    user.role ===
-      "admin"
+    user.role !==
+    "student"
   ) {
-    items.splice(
-      3,
-      0,
-      {
-        id: "knowledge",
-        icon: "🧠",
-        label: "Knowledge",
-      }
-    );
+    items.push({
+      id:
+        "knowledge",
+      icon:
+        "ðŸ§ ",
+      label:
+        "Knowledge",
+    });
   }
 
-
-  /* Admin gets Reports */
 
   if (
     user.role ===
     "admin"
   ) {
-    items.splice(
-      4,
-      0,
-      {
-        id: "reports",
-        icon: "🚨",
-        label:
-          reportCount > 0
-            ? `Reports (${reportCount})`
-            : "Reports",
-      }
-    );
+
+    items.push({
+      id:
+        "accounts",
+      icon:
+        "ðŸ‘¥",
+      label:
+        "Accounts",
+    });
+
+
+    items.push({
+      id:
+        "reports",
+      icon:
+        "ðŸš¨",
+      label:
+        reportCount
+          ? `Reports (${reportCount})`
+          : "Reports",
+    });
+
   }
 
 
+  items.push({
+    id:
+      "settings",
+    icon:
+      "âš™ï¸",
+    label:
+      "Settings",
+  });
+
+
   return (
-    <View
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={
+        false
+      }
       style={
         styles.navigation
       }
+      contentContainerStyle={
+        styles.navigationContent
+      }
     >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={
-          false
-        }
-        contentContainerStyle={
-          styles.navigationContent
-        }
-      >
-        {items.map(
-          (item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.navItem,
-                page ===
-                  item.id &&
-                  styles.selectedNavItem,
-              ]}
-              onPress={() =>
-                setPage(
-                  item.id
-                )
+
+      {items.map(
+        (item) => (
+
+          <TouchableOpacity
+            key={
+              item.id
+            }
+            style={[
+              styles.navItem,
+              page ===
+                item.id &&
+                styles.navSelected,
+            ]}
+            onPress={() =>
+              setPage(
+                item.id
+              )
+            }
+          >
+
+            <Text
+              style={
+                styles.navIcon
               }
             >
-              <Text
-                style={
-                  styles.navIcon
-                }
-              >
-                {item.icon}
-              </Text>
+              {
+                item.icon
+              }
+            </Text>
 
-              <Text
-                style={[
-                  styles.navText,
-                  page ===
-                    item.id &&
-                    styles.selectedNavText,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )
-        )}
-      </ScrollView>
-    </View>
+
+            <Text
+              style={[
+                styles.navLabel,
+                page ===
+                  item.id &&
+                  styles.navLabelSelected,
+              ]}
+            >
+              {
+                item.label
+              }
+            </Text>
+
+          </TouchableOpacity>
+
+        )
+      )}
+
+    </ScrollView>
   );
 }
 
 
 /* =========================================================
-   EMPTY
+   EMPTY STATE
    ========================================================= */
 
 function EmptyState({
@@ -3414,21 +5731,26 @@ function EmptyState({
         styles.empty
       }
     >
+
       <Text
         style={
-          styles.emptyIcon
+          styles.emptyEmoji
         }
       >
-        📭
+        ðŸ“­
       </Text>
+
 
       <Text
         style={
           styles.emptyText
         }
       >
-        {text}
+        {
+          text
+        }
       </Text>
+
     </View>
   );
 }
@@ -3440,14 +5762,11 @@ function EmptyState({
 
 const styles =
   StyleSheet.create({
-    flex: {
-      flex: 1,
-    },
 
     app: {
       flex: 1,
       backgroundColor:
-        "#f5f7fb",
+        "#f4f7fb",
     },
 
     darkApp: {
@@ -3455,12 +5774,55 @@ const styles =
         "#111827",
     },
 
-    darkText: {
-      color: "#fff",
+    flex: {
+      flex: 1,
     },
 
-    darkSecondary: {
-      color: "#9ca3af",
+    content: {
+      flex: 1,
+    },
+
+    loading: {
+      flex: 1,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      backgroundColor:
+        "#f4f7fb",
+    },
+
+    loadingEmoji: {
+      fontSize:
+        50,
+    },
+
+    loadingTitle: {
+      fontSize:
+        28,
+      fontWeight:
+        "900",
+      marginVertical:
+        8,
+    },
+
+    topBar: {
+      backgroundColor:
+        "#fff",
+      paddingHorizontal:
+        18,
+      paddingVertical:
+        14,
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "space-between",
+      borderBottomWidth:
+        1,
+      borderBottomColor:
+        "#e5e7eb",
     },
 
     darkCard: {
@@ -3470,239 +5832,449 @@ const styles =
         "#374151",
     },
 
-    loading: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent:
-        "center",
-    },
-
-    loadingEmoji: {
-      fontSize: 60,
-    },
-
-    loadingTitle: {
-      fontSize: 30,
-      fontWeight: "900",
-      marginTop: 10,
-    },
-
-    topBar: {
-      minHeight: 72,
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      backgroundColor:
-        "#fff",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-      borderBottomWidth: 1,
-      borderBottomColor:
-        "#e5e7eb",
-    },
-
     appTitle: {
-      fontSize: 23,
-      fontWeight: "800",
+      fontSize:
+        22,
+      fontWeight:
+        "800",
+      color:
+        "#111827",
     },
 
     userText: {
-      marginTop: 3,
-      fontSize: 12,
-      color: "#6b7280",
+      color:
+        "#6b7280",
+      marginTop:
+        2,
+    },
+
+    darkText: {
+      color:
+        "#f9fafb",
+    },
+
+    darkSecondary: {
+      color:
+        "#d1d5db",
     },
 
     logoutButton: {
       backgroundColor:
-        "#ef4444",
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-      borderRadius: 10,
+        "#fee2e2",
+      paddingHorizontal:
+        13,
+      paddingVertical:
+        9,
+      borderRadius:
+        10,
     },
 
     logoutText: {
-      color: "#fff",
-      fontWeight: "800",
-    },
-
-    content: {
-      flex: 1,
+      color:
+        "#b91c1c",
+      fontWeight:
+        "700",
     },
 
     page: {
-      padding: 18,
-      paddingBottom: 40,
-      width: "100%",
-      maxWidth: 1100,
-      alignSelf: "center",
+      padding:
+        18,
+      paddingBottom:
+        35,
     },
 
     pageTitle: {
-      fontSize: 29,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        27,
+      fontWeight:
+        "800",
+      color:
+        "#111827",
+      marginBottom:
+        5,
     },
 
     pageSubtitle: {
-      marginTop: 5,
-      marginBottom: 20,
-      color: "#6b7280",
+      color:
+        "#6b7280",
+      lineHeight:
+        20,
+      marginBottom:
+        18,
     },
 
     grid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 12,
+      flexDirection:
+        "row",
+      flexWrap:
+        "wrap",
+      gap:
+        12,
+      marginBottom:
+        24,
     },
 
     dashboardCard: {
-      width: 170,
-      minHeight: 140,
-      padding: 18,
-      borderRadius: 18,
-      backgroundColor: "#fff",
-      justifyContent:
-        "center",
-      elevation: 2,
+      width:
+        "47%",
+      minHeight:
+        135,
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        18,
+      padding:
+        16,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
     },
 
     dashboardIcon: {
-      fontSize: 30,
-      marginBottom: 8,
+      fontSize:
+        30,
     },
 
     dashboardTitle: {
-      fontWeight: "700",
-      fontSize: 16,
+      marginTop:
+        9,
+      color:
+        "#111827",
+      fontWeight:
+        "700",
     },
 
     dashboardValue: {
-      marginTop: 5,
-      color: "#2563eb",
-      fontWeight: "800",
+      marginTop:
+        5,
+      color:
+        "#2563eb",
+      fontWeight:
+        "900",
     },
 
     sectionTitle: {
-      fontSize: 21,
-      fontWeight: "800",
-      marginTop: 28,
-      marginBottom: 12,
+      fontSize:
+        20,
+      fontWeight:
+        "800",
+      marginBottom:
+        12,
     },
 
     rowBetween: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection:
+        "row",
       justifyContent:
         "space-between",
-      gap: 10,
+      alignItems:
+        "center",
+      gap:
+        10,
+      marginBottom:
+        10,
     },
 
     smallButton: {
       backgroundColor:
         "#2563eb",
-      paddingHorizontal: 15,
-      paddingVertical: 10,
-      borderRadius: 10,
+      paddingHorizontal:
+        14,
+      paddingVertical:
+        10,
+      borderRadius:
+        10,
     },
 
     smallButtonText: {
-      color: "#fff",
-      fontWeight: "800",
+      color:
+        "#fff",
+      fontWeight:
+        "800",
     },
 
-    homeworkCard: {
-      backgroundColor: "#fff",
-      borderRadius: 15,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: "#e5e7eb",
-    },
-
-    homeworkTop: {
-      flexDirection: "row",
-      alignItems: "center",
-    },
-
-    homeworkTitle: {
-      fontSize: 18,
-      fontWeight: "800",
-    },
-
-    subjectBadge: {
-      color: "#2563eb",
-      fontWeight: "700",
-      marginTop: 5,
-    },
-
-    homeworkDescription: {
-      marginTop: 12,
-      lineHeight: 21,
-      color: "#4b5563",
-    },
-
-    dueDate: {
-      marginTop: 12,
-      color: "#dc2626",
-      fontWeight: "700",
-    },
-
-    createdBy: {
-      marginTop: 6,
-      fontSize: 12,
-      color: "#6b7280",
-    },
-
-    completeButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+    primaryButton: {
       backgroundColor:
-        "#dcfce7",
-      alignItems: "center",
+        "#2563eb",
+      paddingHorizontal:
+        16,
+      paddingVertical:
+        12,
+      borderRadius:
+        10,
+      alignItems:
+        "center",
       justifyContent:
         "center",
     },
 
+    primaryText: {
+      color:
+        "#fff",
+      fontWeight:
+        "800",
+    },
+
+    homeworkCard: {
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        16,
+      padding:
+        16,
+      marginBottom:
+        12,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
+    },
+
+    homeworkTitle: {
+      fontSize:
+        18,
+      fontWeight:
+        "800",
+      color:
+        "#111827",
+      marginBottom:
+        8,
+    },
+
+    subjectBadge: {
+      alignSelf:
+        "flex-start",
+      backgroundColor:
+        "#dbeafe",
+      color:
+        "#1d4ed8",
+      paddingHorizontal:
+        9,
+      paddingVertical:
+        4,
+      borderRadius:
+        8,
+      overflow:
+        "hidden",
+      fontSize:
+        12,
+      fontWeight:
+        "800",
+    },
+
+    homeworkDescription: {
+      marginTop:
+        12,
+      color:
+        "#374151",
+      lineHeight:
+        21,
+    },
+
+    dueDate: {
+      marginTop:
+        12,
+      color:
+        "#4b5563",
+      fontWeight:
+        "600",
+    },
+
+    createdBy: {
+      marginTop:
+        5,
+      color:
+        "#9ca3af",
+      fontSize:
+        12,
+    },
+
     deleteButton: {
-      alignSelf: "flex-end",
-      padding: 7,
-      marginTop: 5,
+      alignSelf:
+        "flex-start",
+      marginTop:
+        12,
+      paddingHorizontal:
+        12,
+      paddingVertical:
+        8,
+      backgroundColor:
+        "#fee2e2",
+      borderRadius:
+        9,
     },
 
     deleteText: {
-      color: "#dc2626",
-      fontWeight: "700",
+      color:
+        "#b91c1c",
+      fontWeight:
+        "700",
+    },
+
+    modalBackground: {
+      flex: 1,
+      backgroundColor:
+        "rgba(0,0,0,.45)",
+      justifyContent:
+        "flex-end",
+    },
+
+    modalCard: {
+      backgroundColor:
+        "#fff",
+      maxHeight:
+        "90%",
+      borderTopLeftRadius:
+        24,
+      borderTopRightRadius:
+        24,
+      padding:
+        20,
+    },
+
+    modalTitle: {
+      fontSize:
+        23,
+      fontWeight:
+        "800",
+      marginBottom:
+        14,
+    },
+
+    inputLabel: {
+      fontWeight:
+        "700",
+      color:
+        "#374151",
+      marginTop:
+        12,
+      marginBottom:
+        7,
+    },
+
+    input: {
+      backgroundColor:
+        "#fff",
+      borderWidth:
+        1,
+      borderColor:
+        "#d1d5db",
+      borderRadius:
+        11,
+      paddingHorizontal:
+        12,
+      paddingVertical:
+        11,
+      fontSize:
+        16,
+    },
+
+    textArea: {
+      minHeight:
+        110,
+      textAlignVertical:
+        "top",
+    },
+
+    subjectChoice: {
+      borderWidth:
+        1,
+      borderColor:
+        "#d1d5db",
+      borderRadius:
+        9,
+      paddingHorizontal:
+        10,
+      paddingVertical:
+        8,
+      marginRight:
+        7,
+      marginBottom:
+        8,
+    },
+
+    selectedSubject: {
+      backgroundColor:
+        "#dbeafe",
+      borderColor:
+        "#2563eb",
+    },
+
+    subjectChoiceText: {
+      color:
+        "#374151",
+    },
+
+    selectedSubjectText: {
+      color:
+        "#1d4ed8",
+      fontWeight:
+        "800",
+    },
+
+    modalButtons: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "flex-end",
+      gap:
+        10,
+      marginTop:
+        18,
+    },
+
+    cancelButton: {
+      backgroundColor:
+        "#e5e7eb",
+      borderRadius:
+        10,
+      paddingHorizontal:
+        15,
+      paddingVertical:
+        12,
     },
 
     calendarDate: {
-      backgroundColor: "#fff",
-      padding: 17,
-      borderRadius: 14,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: "#e5e7eb",
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        14,
+      padding:
+        15,
+      marginBottom:
+        10,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
     },
 
     selectedCalendarDate: {
-      borderColor: "#2563eb",
-      borderWidth: 2,
+      backgroundColor:
+        "#eff6ff",
+      borderColor:
+        "#2563eb",
     },
 
     calendarDateText: {
-      fontSize: 17,
-      fontWeight: "800",
-    },
-
-    calendarCount: {
-      marginTop: 4,
-      color: "#6b7280",
+      fontSize:
+        17,
+      fontWeight:
+        "800",
+      marginBottom:
+        4,
     },
 
     aiHeader: {
-      paddingHorizontal: 18,
-      paddingTop: 18,
+      padding:
+        18,
+      backgroundColor:
+        "#fff",
+      borderBottomWidth:
+        1,
+      borderBottomColor:
+        "#e5e7eb",
     },
 
     chat: {
@@ -3710,63 +6282,88 @@ const styles =
     },
 
     chatContent: {
-      padding: 18,
+      padding:
+        16,
     },
 
     message: {
-      maxWidth: "85%",
-      padding: 13,
-      borderRadius: 15,
-      marginBottom: 12,
+      maxWidth:
+        "90%",
+      padding:
+        14,
+      borderRadius:
+        17,
+      marginBottom:
+        12,
     },
 
     studentMessage: {
-      alignSelf: "flex-end",
+      alignSelf:
+        "flex-end",
       backgroundColor:
         "#dbeafe",
     },
 
     aiMessage: {
-      alignSelf: "flex-start",
+      alignSelf:
+        "flex-start",
       backgroundColor:
         "#fff",
-      borderWidth: 1,
+      borderWidth:
+        1,
       borderColor:
         "#e5e7eb",
     },
 
     messageSender: {
-      fontSize: 11,
-      fontWeight: "800",
-      color: "#6b7280",
-      marginBottom: 5,
+      fontSize:
+        12,
+      fontWeight:
+        "800",
+      color:
+        "#4b5563",
+      marginBottom:
+        6,
     },
 
     messageText: {
-      lineHeight: 21,
-      color: "#111827",
+      fontSize:
+        16,
+      lineHeight:
+        24,
+      color:
+        "#111827",
     },
 
     subjectBar: {
-      padding: 10,
-      backgroundColor: "#fff",
-      borderTopWidth: 1,
+      backgroundColor:
+        "#fff",
+      padding:
+        10,
+      borderTopWidth:
+        1,
       borderTopColor:
         "#e5e7eb",
     },
 
     subjectLabel: {
-      fontWeight: "700",
-      marginBottom: 7,
+      fontWeight:
+        "800",
+      marginBottom:
+        6,
     },
 
     aiSubject: {
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      borderRadius: 20,
       backgroundColor:
         "#f3f4f6",
-      marginRight: 7,
+      paddingHorizontal:
+        10,
+      paddingVertical:
+        7,
+      borderRadius:
+        9,
+      marginRight:
+        6,
     },
 
     selectedAISubject: {
@@ -3775,375 +6372,508 @@ const styles =
     },
 
     aiSubjectText: {
-      fontSize: 12,
+      color:
+        "#374151",
+      fontSize:
+        12,
     },
 
     selectedAISubjectText: {
-      color: "#fff",
-      fontWeight: "700",
-      fontSize: 12,
+      color:
+        "#fff",
+      fontWeight:
+        "800",
+      fontSize:
+        12,
     },
 
     chatInputRow: {
-      flexDirection: "row",
-      padding: 10,
+      flexDirection:
+        "row",
+      gap:
+        8,
+      alignItems:
+        "flex-end",
+      padding:
+        10,
       backgroundColor:
         "#fff",
-      gap: 8,
     },
 
     chatInput: {
       flex: 1,
-      minHeight: 45,
-      maxHeight: 100,
-      borderWidth: 1,
+      minHeight:
+        46,
+      maxHeight:
+        120,
+      borderWidth:
+        1,
       borderColor:
         "#d1d5db",
-      borderRadius: 13,
-      padding: 12,
-      backgroundColor:
-        "#fff",
+      borderRadius:
+        13,
+      paddingHorizontal:
+        12,
+      paddingVertical:
+        10,
     },
 
     sendButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width:
+        46,
+      height:
+        46,
+      borderRadius:
+        23,
       backgroundColor:
         "#2563eb",
-      alignItems: "center",
+      alignItems:
+        "center",
       justifyContent:
         "center",
     },
 
+    disabledButton: {
+      opacity:
+        0.5,
+    },
+
     sendText: {
-      color: "#fff",
-      fontSize: 21,
+      color:
+        "#fff",
+      fontSize:
+        20,
+      fontWeight:
+        "800",
     },
 
     knowledgeCard: {
-      backgroundColor: "#fff",
-      borderRadius: 15,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 1,
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        16,
+      padding:
+        16,
+      marginBottom:
+        12,
+      borderWidth:
+        1,
       borderColor:
         "#e5e7eb",
     },
 
     knowledgeSubject: {
-      color: "#2563eb",
-      fontWeight: "800",
+      color:
+        "#2563eb",
+      fontWeight:
+        "800",
+      marginBottom:
+        5,
     },
 
     knowledgeTitle: {
-      marginTop: 5,
-      fontSize: 18,
-      fontWeight: "800",
+      fontSize:
+        18,
+      fontWeight:
+        "800",
+      marginBottom:
+        8,
     },
 
     knowledgeContent: {
-      marginTop: 10,
-      lineHeight: 21,
-      color: "#4b5563",
+      color:
+        "#374151",
+      lineHeight:
+        21,
     },
 
-    settingsCard: {
-      backgroundColor: "#fff",
-      borderRadius: 16,
-      padding: 17,
+    accountSummary: {
+      flexDirection:
+        "row",
+      flexWrap:
+        "wrap",
+      gap:
+        10,
+      marginBottom:
+        16,
     },
 
-    settingRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      minHeight: 65,
-    },
-
-    settingTitle: {
-      fontSize: 17,
-      fontWeight: "700",
-    },
-
-    settingDescription: {
-      color: "#6b7280",
-      marginTop: 3,
-    },
-
-    divider: {
-      height: 1,
+    summaryBox: {
       backgroundColor:
+        "#fff",
+      borderRadius:
+        14,
+      padding:
+        14,
+      minWidth:
+        100,
+      flexGrow:
+        1,
+      borderWidth:
+        1,
+      borderColor:
         "#e5e7eb",
     },
 
-    accountCard: {
-      backgroundColor: "#fff",
-      borderRadius: 16,
-      padding: 17,
-      marginTop: 16,
+    summaryNumber: {
+      fontSize:
+        23,
+      fontWeight:
+        "900",
+      color:
+        "#2563eb",
+    },
+
+    summaryDanger: {
+      color:
+        "#dc2626",
+    },
+
+    summaryLabel: {
+      marginTop:
+        4,
+      color:
+        "#6b7280",
+    },
+
+    accountManageCard: {
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        15,
+      padding:
+        16,
+      marginBottom:
+        12,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      gap:
+        12,
+    },
+
+    accountManageName: {
+      fontSize:
+        17,
+      fontWeight:
+        "800",
+      color:
+        "#111827",
     },
 
     accountText: {
-      color: "#4b5563",
-      marginBottom: 6,
+      color:
+        "#6b7280",
+      marginTop:
+        4,
+    },
+
+    accountStatus: {
+      color:
+        "#16a34a",
+      marginTop:
+        8,
+      fontWeight:
+        "900",
+    },
+
+    accountBanned: {
+      color:
+        "#dc2626",
+    },
+
+    protectedText: {
+      color:
+        "#7c3aed",
+      fontWeight:
+        "900",
+      marginTop:
+        8,
+      fontSize:
+        12,
+    },
+
+    banButton: {
+      backgroundColor:
+        "#dc2626",
+      paddingHorizontal:
+        14,
+      paddingVertical:
+        10,
+      borderRadius:
+        10,
+    },
+
+    unbanButton: {
+      backgroundColor:
+        "#16a34a",
+      paddingHorizontal:
+        14,
+      paddingVertical:
+        10,
+      borderRadius:
+        10,
     },
 
     reportCard: {
-      backgroundColor: "#fff",
-      borderRadius: 15,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 1,
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        14,
+      padding:
+        15,
+      marginBottom:
+        10,
+      borderWidth:
+        1,
       borderColor:
         "#fecaca",
     },
 
-    reportTitle: {
-      fontSize: 18,
-      fontWeight: "800",
-    },
-
-    reportStudent: {
-      marginTop: 8,
-      fontWeight: "700",
+    reportType: {
+      color:
+        "#dc2626",
+      fontWeight:
+        "900",
     },
 
     reportMessage: {
-      marginTop: 8,
-      color: "#4b5563",
+      marginTop:
+        8,
+      color:
+        "#374151",
+      lineHeight:
+        20,
     },
 
-    reportButtons: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "flex-end",
-      marginTop: 8,
+    settingsCard: {
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        16,
+      padding:
+        16,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
+      marginBottom:
+        15,
+    },
+
+    settingRow: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+    },
+
+    settingTitle: {
+      fontSize:
+        16,
+      fontWeight:
+        "800",
+    },
+
+    settingDescription: {
+      marginTop:
+        3,
+      color:
+        "#6b7280",
+      lineHeight:
+        19,
+    },
+
+    divider: {
+      height:
+        1,
+      backgroundColor:
+        "#e5e7eb",
+      marginVertical:
+        15,
+    },
+
+    accountCard: {
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        16,
+      padding:
+        16,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
     },
 
     navigation: {
-      backgroundColor: "#fff",
-      borderTopWidth: 1,
+      maxHeight:
+        72,
+      backgroundColor:
+        "#fff",
+      borderTopWidth:
+        1,
       borderTopColor:
         "#e5e7eb",
     },
 
     navigationContent: {
-      paddingHorizontal: 8,
-      paddingVertical: 7,
-      alignItems: "center",
+      paddingHorizontal:
+        8,
+      paddingVertical:
+        8,
+      gap:
+        6,
     },
 
     navItem: {
-      minWidth: 70,
-      paddingHorizontal: 8,
-      paddingVertical: 6,
-      borderRadius: 12,
-      alignItems: "center",
-      marginHorizontal: 2,
+      minWidth:
+        78,
+      paddingVertical:
+        8,
+      paddingHorizontal:
+        9,
+      borderRadius:
+        10,
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
     },
 
-    selectedNavItem: {
+    navSelected: {
       backgroundColor:
         "#dbeafe",
     },
 
     navIcon: {
-      fontSize: 20,
+      fontSize:
+        19,
     },
 
-    navText: {
-      marginTop: 2,
-      fontSize: 11,
-      color: "#6b7280",
-      fontWeight: "600",
+    navLabel: {
+      fontSize:
+        11,
+      color:
+        "#374151",
+      marginTop:
+        3,
     },
 
-    selectedNavText: {
-      color: "#2563eb",
-      fontWeight: "800",
+    navLabelSelected: {
+      color:
+        "#1d4ed8",
+      fontWeight:
+        "800",
     },
 
     empty: {
-      padding: 35,
-      alignItems: "center",
-      justifyContent:
+      backgroundColor:
+        "#fff",
+      borderRadius:
+        16,
+      padding:
+        35,
+      alignItems:
         "center",
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
     },
 
-    emptyIcon: {
-      fontSize: 40,
-      marginBottom: 10,
+    emptyEmoji: {
+      fontSize:
+        30,
+      marginBottom:
+        8,
     },
 
     emptyText: {
-      color: "#6b7280",
-      textAlign: "center",
-    },
-
-    modalBackground: {
-      flex: 1,
-      backgroundColor:
-        "rgba(0,0,0,0.45)",
-      justifyContent:
-        "flex-end",
-    },
-
-    modalCard: {
-      backgroundColor: "#fff",
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 20,
-      maxHeight: "90%",
-    },
-
-    modalTitle: {
-      fontSize: 24,
-      fontWeight: "800",
-      marginBottom: 8,
-    },
-
-    modalDescription: {
-      color: "#6b7280",
-      marginBottom: 15,
-    },
-
-    inputLabel: {
-      fontWeight: "700",
-      marginTop: 10,
-      marginBottom: 6,
-    },
-
-    input: {
-      borderWidth: 1,
-      borderColor:
-        "#d1d5db",
-      borderRadius: 11,
-      padding: 11,
-      backgroundColor:
-        "#fff",
-      fontSize: 15,
-    },
-
-    textArea: {
-      minHeight: 90,
-      textAlignVertical:
-        "top",
-    },
-
-    largeTextArea: {
-      minHeight: 160,
-      textAlignVertical:
-        "top",
-    },
-
-    modalButtons: {
-      flexDirection: "row",
-      justifyContent:
-        "flex-end",
-      gap: 10,
-      marginTop: 18,
-    },
-
-    cancelButton: {
-      paddingHorizontal: 15,
-      paddingVertical: 12,
-      borderRadius: 10,
-      backgroundColor:
-        "#f3f4f6",
-      justifyContent:
+      color:
+        "#6b7280",
+      textAlign:
         "center",
-    },
-
-    primaryButton: {
-      backgroundColor:
-        "#2563eb",
-      paddingHorizontal: 17,
-      paddingVertical: 12,
-      borderRadius: 10,
-      alignItems: "center",
-      justifyContent:
-        "center",
-    },
-
-    primaryText: {
-      color: "#fff",
-      fontWeight: "800",
-    },
-
-    subjectChoice: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      backgroundColor:
-        "#f3f4f6",
-      borderRadius: 20,
-      marginRight: 7,
-      marginBottom: 8,
-    },
-
-    selectedSubject: {
-      backgroundColor:
-        "#2563eb",
-    },
-
-    subjectChoiceText: {
-      color: "#374151",
-      fontSize: 12,
-    },
-
-    selectedSubjectText: {
-      color: "#fff",
-      fontWeight: "700",
-      fontSize: 12,
     },
 
     loginContainer: {
       flex: 1,
       backgroundColor:
-        "#eff6ff",
+        "#eef4ff",
     },
 
     loginContent: {
-      flexGrow: 1,
-      alignItems: "center",
+      flexGrow:
+        1,
+      width:
+        "100%",
+      maxWidth:
+        600,
+      alignSelf:
+        "center",
+      padding:
+        24,
       justifyContent:
         "center",
-      padding: 25,
     },
 
     loginLogo: {
-      fontSize: 60,
+      fontSize:
+        56,
+      textAlign:
+        "center",
     },
 
     loginTitle: {
-      fontSize: 38,
-      fontWeight: "900",
-      color: "#111827",
+      fontSize:
+        34,
+      fontWeight:
+        "900",
+      textAlign:
+        "center",
+      color:
+        "#111827",
+      marginTop:
+        8,
     },
 
     loginSubtitle: {
-      textAlign: "center",
-      color: "#6b7280",
-      marginVertical: 15,
-      maxWidth: 500,
+      textAlign:
+        "center",
+      color:
+        "#6b7280",
+      marginTop:
+        5,
+      marginBottom:
+        22,
     },
 
     loginSwitch: {
-      flexDirection: "row",
+      flexDirection:
+        "row",
       backgroundColor:
         "#fff",
-      borderRadius: 14,
-      padding: 5,
-      marginBottom: 15,
-      width: "100%",
-      maxWidth: 450,
+      borderRadius:
+        13,
+      padding:
+        4,
+      marginBottom:
+        14,
     },
 
     loginSwitchButton: {
       flex: 1,
-      paddingVertical: 12,
-      alignItems: "center",
-      borderRadius: 10,
+      alignItems:
+        "center",
+      paddingVertical:
+        11,
+      borderRadius:
+        10,
     },
 
     loginSelected: {
@@ -4152,36 +6882,43 @@ const styles =
     },
 
     loginCard: {
-      width: "100%",
-      maxWidth: 450,
       backgroundColor:
         "#fff",
-      padding: 22,
-      borderRadius: 20,
-      elevation: 4,
+      borderRadius:
+        20,
+      padding:
+        20,
+      borderWidth:
+        1,
+      borderColor:
+        "#e5e7eb",
     },
 
     cardTitle: {
-      fontSize: 24,
-      fontWeight: "800",
-      marginBottom: 8,
+      fontSize:
+        22,
+      fontWeight:
+        "800",
     },
 
     cardDescription: {
-      color: "#6b7280",
-      marginBottom: 12,
+      color:
+        "#6b7280",
+      marginTop:
+        5,
+      marginBottom:
+        8,
     },
 
     helperText: {
-      textAlign: "center",
-      color: "#6b7280",
-      fontSize: 12,
-      marginTop: 12,
+      color:
+        "#6b7280",
+      fontSize:
+        12,
+      marginTop:
+        12,
+      lineHeight:
+        18,
     },
 
-    versionText: {
-      textAlign: "center",
-      color: "#6b7280",
-      marginTop: 20,
-    },
   });

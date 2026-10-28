@@ -21,7 +21,16 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+function showMessage(title, message) {
+  if (
+    Platform.OS === "web" &&
+    typeof window !== "undefined"
+  ) {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
 
 /* =========================================================
    STUDYPLANNER V7
@@ -1795,9 +1804,10 @@ export default function App() {
 
 
     if (!teacher) {
-      Alert.alert(
-        "Login failed",
-        "Teacher account not found."
+      showMessage(
+  "Login failed",
+  "Teacher account not found."
+);
       );
 
       return;
@@ -2136,9 +2146,10 @@ export default function App() {
         onStudentLogin={
           studentLogin
         }
-        onTeacherLogin={
-          teacherLogin
-        }
+       onPress={() => {
+  console.log("Teacher Login button clicked");
+  onTeacherLogin(username, password);
+}}
       />
     );
   }

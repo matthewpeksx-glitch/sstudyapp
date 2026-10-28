@@ -1808,7 +1808,6 @@ export default function App() {
   "Login failed",
   "Teacher account not found."
 );
-      );
 
       return;
     }
